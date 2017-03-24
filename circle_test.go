@@ -11,5 +11,5 @@ func TestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(BuildStatistics(build))
+	fmt.Println(build.Statistics())
 }

@@ -1,6 +1,7 @@
 package wait
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/url"
@@ -13,15 +14,6 @@ import (
 
 func roundDuration(d time.Duration, unit time.Duration) time.Duration {
 	return ((d + unit/2) / unit) * unit
-}
-
-// getStats returns a string with statistics about a given build number.
-func getStats(org string, project string, buildNum int) string {
-	build, err := circle.GetBuild(org, project, buildNum)
-	if err != nil {
-		return ""
-	}
-	return circle.BuildStatistics(build)
 }
 
 func round(f float64) int {
@@ -131,16 +123,34 @@ func Wait(branch string) error {
 		duration = roundDuration(duration, time.Second)
 		if latestBuild.Passed() {
 			fmt.Printf("Build on %s succeeded!\n\n", branch)
-			fmt.Print(getStats(remote.Path, remote.RepoName, latestBuild.BuildNum))
+			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
+			if err == nil {
+				fmt.Print(build.Statistics())
+			} else {
+				fmt.Printf("error getting build: %v\n", err)
+			}
 			fmt.Printf("\nTests on %s took %s. Quitting.\n", branch, duration.String())
 			c := bigtext.Client{
 				Name:    fmt.Sprintf("%s (go-circle)", remote.RepoName),
 				OpenURL: latestBuild.BuildURL,
 			}
-			c.Display(fmt.Sprintf("%s build complete!", branch))
+			c.Display(branch + " build complete!")
 			break
 		} else if latestBuild.Failed() {
-			fmt.Print(getStats(remote.Path, remote.RepoName, latestBuild.BuildNum))
+			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
+			if err == nil {
+				fmt.Print(build.Statistics())
+				texts, textsErr := build.FailureTexts(context.Background())
+				if textsErr != nil {
+					fmt.Printf("error getting build failures: %v\n", textsErr)
+				}
+				fmt.Printf("\nOutput from failed builds:\n\n")
+				for _, text := range texts {
+					fmt.Println(text)
+				}
+			} else {
+				fmt.Printf("error getting build: %v\n", err)
+			}
 			fmt.Printf("\nURL: %s\n", latestBuild.BuildURL)
 			err = fmt.Errorf("Build on %s failed!\n\n", branch)
 			c := bigtext.Client{

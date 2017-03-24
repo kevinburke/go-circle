@@ -15,6 +15,7 @@ import (
 
 	"github.com/Shyp/go-types"
 	"github.com/kevinburke/rest"
+	"golang.org/x/sync/errgroup"
 )
 
 var client http.Client
@@ -34,21 +35,21 @@ const baseUri = "https://circleci.com/api/v1/project"
 const v11BaseUri = "https://circleci.com/api/v1.1/project"
 
 type TreeBuild struct {
-	BuildNum	int	`json:"build_num"`
-	BuildURL	string	`json:"build_url"`
-	CompareURL	string	`json:"compare"`
+	BuildNum   int    `json:"build_num"`
+	BuildURL   string `json:"build_url"`
+	CompareURL string `json:"compare"`
 	// Tree builds have a `previous_successful_build` field but as far as I can
 	// tell it is always null. Instead this field is set
-	Previous	PreviousBuild	`json:"previous"`
-	QueuedAt	types.NullTime	`json:"queued_at"`
-	RepoName	string		`json:"reponame"`
-	Status		string		`json:"status"`
-	StartTime	types.NullTime	`json:"start_time"`
-	StopTime	types.NullTime	`json:"stop_time"`
-	UsageQueuedAt	types.NullTime	`json:"usage_queued_at"`
-	Username	string		`json:"username"`
-	VCSRevision	string		`json:"vcs_revision"`
-	VCSType		string		`json:"vcs_type"`
+	Previous      PreviousBuild  `json:"previous"`
+	QueuedAt      types.NullTime `json:"queued_at"`
+	RepoName      string         `json:"reponame"`
+	Status        string         `json:"status"`
+	StartTime     types.NullTime `json:"start_time"`
+	StopTime      types.NullTime `json:"stop_time"`
+	UsageQueuedAt types.NullTime `json:"usage_queued_at"`
+	Username      string         `json:"username"`
+	VCSRevision   string         `json:"vcs_revision"`
+	VCSType       string         `json:"vcs_type"`
 }
 
 func (tb TreeBuild) Passed() bool {
@@ -68,39 +69,103 @@ func (tb TreeBuild) Failed() bool {
 }
 
 type CircleArtifact struct {
-	Path		string	`json:"path"`
-	PrettyPath	string	`json:"pretty_path"`
-	NodeIndex	uint8	`json:"node_index"`
-	Url		string	`json:"url"`
+	Path       string `json:"path"`
+	PrettyPath string `json:"pretty_path"`
+	NodeIndex  uint8  `json:"node_index"`
+	Url        string `json:"url"`
 }
 
 type CircleBuild struct {
-	Parallel		uint8		`json:"parallel"`
-	PreviousSuccessfulBuild	PreviousBuild	`json:"previous_successful_build"`
-	QueuedAt		types.NullTime	`json:"queued_at"`
-	Steps			[]Step		`json:"steps"`
-	UsageQueuedAt		types.NullTime	`json:"usage_queued_at"`
+	BuildNum                uint32         `json:"build_num"`
+	Parallel                uint8          `json:"parallel"`
+	PreviousSuccessfulBuild PreviousBuild  `json:"previous_successful_build"`
+	QueuedAt                types.NullTime `json:"queued_at"`
+	RepoName                string         `json:"reponame"` // "go"
+	Steps                   []Step         `json:"steps"`
+	VCSType                 string         `json:"vcs_type"` // "github", "bitbucket"
+	UsageQueuedAt           types.NullTime `json:"usage_queued_at"`
+	Username                string         `json:"username"` // "golang"
+}
+
+// Failures returns an array of (buildStep, containerID) integers identifying
+// the IDs of container/build step pairs that failed.
+func (cb *CircleBuild) Failures() [][2]int {
+	failures := make([][2]int, 0)
+	for i, step := range cb.Steps {
+		for j, action := range step.Actions {
+			if action.Failed() {
+				failures = append(failures, [...]int{i, j})
+			}
+		}
+	}
+	return failures
+}
+
+type CircleOutput struct {
+	Message string    `json:"message"`
+	Time    time.Time `json:"time"`
+	Type    string    `json:"type"`
+}
+
+type CircleOutputs []*CircleOutput
+
+func (cb *CircleBuild) FailureTexts(ctx context.Context) ([]string, error) {
+	group, errctx := errgroup.WithContext(ctx)
+	// todo this is not great design
+	token, err := getToken(cb.Username)
+	if err != nil {
+		return nil, err
+	}
+	failures := cb.Failures()
+	results := make([]string, len(failures))
+	for i, failure := range failures {
+		failure := failure
+		i := i
+		// https://circleci.com/api/v1.1/project/github/segmentio/terracode-bootstrap/11/output/9/0
+		group.Go(func() error {
+			uri := fmt.Sprintf("/%s/%s/%s/%d/output/%d/%d?circle-token=%s", cb.VCSType, cb.Username, cb.RepoName, cb.BuildNum, failure[0], failure[1], token)
+			req, err := v11client.NewRequest("GET", uri, nil)
+			if err != nil {
+				return err
+			}
+			req = req.WithContext(errctx)
+			var outputs []*CircleOutput
+			if err := v11client.Do(req, &outputs); err != nil {
+				return err
+			}
+			var message string
+			for i := range outputs {
+				message = message + outputs[i].Message + "\n"
+			}
+			results[i] = message
+			return nil
+		})
+	}
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 type PreviousBuild struct {
-	BuildNum	int	`json:"build_num"`
+	BuildNum int `json:"build_num"`
 	// would be neat to make this a time.Duration, easier to use the passed in
 	// value.
-	Status	string	`json:"status"`
+	Status string `json:"status"`
 
-	BuildDurationMs	int	`json:"build_time_millis"`
+	BuildDurationMs int `json:"build_time_millis"`
 }
 
 type Step struct {
-	Name	string		`json:"name"`
-	Actions	[]Action	`json:"actions"`
+	Name    string   `json:"name"`
+	Actions []Action `json:"actions"`
 }
 
 type Action struct {
-	Name		string		`json:"name"`
-	OutputURL	URL		`json:"output_url"`
-	Runtime		CircleDuration	`json:"run_time_millis"`
-	Status		string		`json:"status"`
+	Name      string         `json:"name"`
+	OutputURL URL            `json:"output_url"`
+	Runtime   CircleDuration `json:"run_time_millis"`
+	Status    string         `json:"status"`
 }
 
 func (a *Action) Failed() bool {
@@ -112,7 +177,7 @@ func getTreeUri(org string, project string, branch string, token string) string 
 }
 
 func getBuildUri(org string, project string, build int, token string) string {
-	return fmt.Sprintf("%s/%s/%s/%d?circle-token=%s", baseUri, org, project, build, token)
+	return fmt.Sprintf("/%s/%s/%d?circle-token=%s", org, project, build, token)
 }
 
 func getCancelUri(org string, project string, build int, token string) string {
@@ -228,21 +293,16 @@ func GetBuild(org string, project string, buildNum int) (*CircleBuild, error) {
 		return nil, err
 	}
 	uri := getBuildUri(org, project, buildNum, token)
-	body, err := makeRequest("GET", uri)
+	client := rest.NewClient("", "", baseUri)
+	req, err := client.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
-	var r io.Reader
-	if os.Getenv("CIRCLE_DEBUG") == "true" {
-		r = io.TeeReader(body, os.Stdout)
-	} else {
-		r = body
+	cb := new(CircleBuild)
+	if err := client.Do(req, cb); err != nil {
+		return nil, err
 	}
-	d := json.NewDecoder(r)
-	var cb CircleBuild
-	err = d.Decode(&cb)
-	return &cb, err
+	return cb, nil
 }
 
 func GetArtifactsForBuild(org string, project string, buildNum int) ([]*CircleArtifact, error) {

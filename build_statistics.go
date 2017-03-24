@@ -22,7 +22,9 @@ func isatty() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
 
-func BuildStatistics(cb *CircleBuild) string {
+// Statistics prints out statistics for the given build. If stdout is a TTY,
+// failed builds will be surrounded by red ANSI escape sequences.
+func (cb *CircleBuild) Statistics() string {
 	var b bytes.Buffer
 	b.WriteString(fmt.Sprintf(stepPadding, "Step"))
 	l := stepWidth
@@ -48,6 +50,7 @@ func BuildStatistics(cb *CircleBuild) string {
 			}
 			var durString string
 			if action.Failed() && isatty() {
+				// color the output red
 				durString = fmt.Sprintf("\033[38;05;160m%-8s\033[0m", dur.String())
 			} else {
 				durString = fmt.Sprintf("%-8s", dur.String())
