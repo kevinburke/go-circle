@@ -102,6 +102,7 @@ func (cb CircleBuild) Failures() [][2]int {
 				} else {
 					failures = append(failures, [...]int{i, j})
 				}
+				failures = append(failures, [...]int{i, j})
 			}
 		}
 	}
@@ -129,8 +130,9 @@ func (cb CircleBuild) FailureTexts(ctx context.Context) ([]string, error) {
 	for i, failure := range failures {
 		failure := failure
 		i := i
-		// https://circleci.com/api/v1.1/project/github/segmentio/terracode-bootstrap/11/output/9/0
 		group.Go(func() error {
+			// URL we are trying to fetch looks like:
+			// https://circleci.com/api/v1.1/project/github/Shyp/go-circle/11/output/9/0
 			uri := fmt.Sprintf("/%s/%s/%s/%d/output/%d/%d?circle-token=%s", cb.VCSType, cb.Username, cb.RepoName, cb.BuildNum, failure[0], failure[1], token)
 			req, err := v11client.NewRequest("GET", uri, nil)
 			if err != nil {
