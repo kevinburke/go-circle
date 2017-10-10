@@ -1,0 +1,58 @@
+required = [
+    "github.com/github/hub", 
+    "github.com/octokit/go-octokit/octokit",
+    "github.com/fhs/go-netrc/netrc",
+    "github.com/jingweno/go-sawyer/mediatype",
+]
+
+[[constraint]]
+  name = "github.com/BurntSushi/toml"
+  version = "0.3.0"
+
+[[constraint]]
+  name = "github.com/Shyp/go-git"
+  revision = "a5ce5402a5653951dc00560d835549d12d08652d"
+
+[[constraint]]
+  name = "github.com/github/hub"
+  revision = "e39364d545326c8b5692ea9b4d27b29c262ede19"
+
+[[constraint]]
+  name = "github.com/octokit/go-octokit"
+  revision = "90dc35e5b6dbabe929fa4db57f54c187f5206cb2"
+
+[[constraint]]
+  name = "github.com/fhs/go-netrc"
+  revision = "4ffed54ee5c32ebfb1b8c7c72fc90bb08dc3ff43"
+
+[[constraint]]
+  name = "github.com/jingweno/go-sawyer"
+  revision = "1999ae5763d678f3ce1112cf1fda7c7e9cf2aadf"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/equinox-io/equinox"
+
+[[constraint]]
+  name = "github.com/kevinburke/bigtext"
+  version = "0.2.0"
+
+[[constraint]]
+  name = "github.com/kevinburke/go-types"
+  version = "0.21.0"
+
+[[constraint]]
+  name = "github.com/kevinburke/rest"
+  version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/skratchdot/open-golang"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sync"

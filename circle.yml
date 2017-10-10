@@ -8,8 +8,4 @@ jobs:
     steps:
       - checkout
       - run:
-          command: ls -al
-      - run:
-          command: go get -t -v ./...
-      - run:
           command: make test

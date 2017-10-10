@@ -111,13 +111,13 @@ func Wait(branch string) error {
 			if latestBuild.StopTime.Valid {
 				duration = latestBuild.StopTime.Time.Sub(latestBuild.QueuedAt.Time)
 			} else {
-				duration = time.Now().Sub(latestBuild.QueuedAt.Time)
+				duration = time.Since(latestBuild.QueuedAt.Time)
 			}
 		} else if latestBuild.UsageQueuedAt.Valid {
 			if latestBuild.StopTime.Valid {
 				duration = latestBuild.StopTime.Time.Sub(latestBuild.UsageQueuedAt.Time)
 			} else {
-				duration = time.Now().Sub(latestBuild.UsageQueuedAt.Time)
+				duration = time.Since(latestBuild.UsageQueuedAt.Time)
 			}
 		}
 		duration = roundDuration(duration, time.Second)

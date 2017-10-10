@@ -7,15 +7,6 @@ import (
 	"github.com/kevinburke/go-circle"
 )
 
-func inSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
 // GetBuilds gets the status of the 5 most recent Circle builds for a branch
 func GetBuilds(branch string) error {
 	// This throws if the branch doesn't exist

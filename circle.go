@@ -272,10 +272,7 @@ func Rebuild(ctx context.Context, tb *TreeBuild) error {
 		return err
 	}
 	req = req.WithContext(ctx)
-	if err := v11client.Do(req, nil); err != nil {
-		return err
-	}
-	return nil
+	return v11client.Do(req, nil)
 }
 
 func GetTree(org string, project string, branch string) (*CircleTreeResponse, error) {
@@ -337,10 +334,8 @@ func GetArtifactsForBuild(org string, project string, buildNum int) ([]*CircleAr
 		r = body
 	}
 	var arts []*CircleArtifact
-	if err = json.NewDecoder(r).Decode(&arts); err != nil {
-		return arts, err
-	}
-	return arts, nil
+	decodeErr := json.NewDecoder(r).Decode(&arts)
+	return arts, decodeErr
 }
 
 func DownloadArtifact(artifact *CircleArtifact, directory string, org string) error {
@@ -361,10 +356,8 @@ func DownloadArtifact(artifact *CircleArtifact, directory string, org string) er
 		return err
 	}
 	defer body.Close()
-	if _, err := io.Copy(f, body); err != nil {
-		return err
-	}
-	return nil
+	_, copyErr := io.Copy(f, body)
+	return copyErr
 }
 
 func CancelBuild(org string, project string, buildNum int) (*CircleBuild, error) {
