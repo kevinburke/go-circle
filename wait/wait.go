@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Shyp/go-circle"
 	"github.com/Shyp/go-git"
 	"github.com/kevinburke/bigtext"
+	"github.com/kevinburke/go-circle"
 )
 
 func roundDuration(d time.Duration, unit time.Duration) time.Duration {
@@ -140,13 +140,15 @@ func Wait(branch string) error {
 			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
 			if err == nil {
 				fmt.Print(build.Statistics())
-				texts, textsErr := build.FailureTexts(context.Background())
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				texts, textsErr := build.FailureTexts(ctx)
 				if textsErr != nil {
 					fmt.Printf("error getting build failures: %v\n", textsErr)
 				}
+				cancel()
 				fmt.Printf("\nOutput from failed builds:\n\n")
-				for _, text := range texts {
-					fmt.Println(text)
+				for i := range texts {
+					fmt.Println(texts[i])
 				}
 			} else {
 				fmt.Printf("error getting build: %v\n", err)

@@ -1,0 +1,15 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/kevinburke/go-circle
+    docker:
+      - image: golang:1.9
+
+    steps:
+      - checkout
+      - run:
+          command: ls -al
+      - run:
+          command: go get -t -v ./...
+      - run:
+          command: make test

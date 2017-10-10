@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shyp/go-types"
+	types "github.com/kevinburke/go-types"
 	"github.com/kevinburke/rest"
 	"golang.org/x/sync/errgroup"
 )
@@ -78,6 +78,7 @@ type CircleArtifact struct {
 type CircleBuild struct {
 	BuildNum                uint32         `json:"build_num"`
 	Parallel                uint8          `json:"parallel"`
+	Platform                string         `json:"platform"`
 	PreviousSuccessfulBuild PreviousBuild  `json:"previous_successful_build"`
 	QueuedAt                types.NullTime `json:"queued_at"`
 	RepoName                string         `json:"reponame"` // "go"
@@ -89,12 +90,16 @@ type CircleBuild struct {
 
 // Failures returns an array of (buildStep, containerID) integers identifying
 // the IDs of container/build step pairs that failed.
-func (cb *CircleBuild) Failures() [][2]int {
+func (cb CircleBuild) Failures() [][2]int {
 	failures := make([][2]int, 0)
 	for i, step := range cb.Steps {
 		for j, action := range step.Actions {
 			if action.Failed() {
-				failures = append(failures, [...]int{i, j})
+				if cb.Platform == "2.0" {
+					failures = append(failures, [...]int{action.Step, j})
+				} else {
+					failures = append(failures, [...]int{i, j})
+				}
 			}
 		}
 	}
@@ -109,13 +114,14 @@ type CircleOutput struct {
 
 type CircleOutputs []*CircleOutput
 
-func (cb *CircleBuild) FailureTexts(ctx context.Context) ([]string, error) {
+func (cb CircleBuild) FailureTexts(ctx context.Context) ([]string, error) {
 	group, errctx := errgroup.WithContext(ctx)
 	// todo this is not great design
 	token, err := getToken(cb.Username)
 	if err != nil {
 		return nil, err
 	}
+	// V2: https://circleci.com/api/v1.1/project/github/kevinburke/go-circle/8/output/102/0?allocation-id=59dc1a06c9e77c0001793e56-0-build%2F346CFC34&truncate=400000
 	failures := cb.Failures()
 	results := make([]string, len(failures))
 	for i, failure := range failures {
@@ -162,14 +168,22 @@ type Step struct {
 }
 
 type Action struct {
-	Name      string         `json:"name"`
-	OutputURL URL            `json:"output_url"`
-	Runtime   CircleDuration `json:"run_time_millis"`
-	Status    string         `json:"status"`
+	Name         string         `json:"name"`
+	AllocationID string         `json:"allocation_id"`
+	Index        uint16         `json:"index"`
+	OutputURL    URL            `json:"output_url"`
+	Runtime      CircleDuration `json:"run_time_millis"`
+	Status       string         `json:"status"`
+	Step         int            `json:"step"`
+
+	// Failed is a boolean, but we defined it already as a function on the
+	// Action so for compat we should pick a different name when we destructure
+	// it.
+	HasFailed bool `json:"failed"`
 }
 
-func (a *Action) Failed() bool {
-	return a.Status == "failed" || a.Status == "timedout"
+func (a Action) Failed() bool {
+	return a.HasFailed
 }
 
 func getTreeUri(org string, project string, branch string, token string) string {

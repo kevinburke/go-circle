@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	circle "github.com/Shyp/go-circle"
-	"github.com/Shyp/go-circle/wait"
 	git "github.com/Shyp/go-git"
+	circle "github.com/kevinburke/go-circle"
+	"github.com/kevinburke/go-circle/wait"
 	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/sync/errgroup"
 )

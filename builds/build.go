@@ -3,8 +3,8 @@ package build
 import (
 	"fmt"
 
-	"github.com/Shyp/go-circle"
 	"github.com/Shyp/go-git"
+	"github.com/kevinburke/go-circle"
 )
 
 func inSlice(a string, list []string) bool {

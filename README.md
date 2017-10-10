@@ -1,6 +1,6 @@
 # go-circle
 
-[![CircleCI](https://circleci.com/gh/Shyp/go-circle.svg?style=svg)](https://circleci.com/gh/Shyp/go-circle)
+[![CircleCI](https://circleci.com/gh/kevinburke/go-circle.svg?style=svg)](https://circleci.com/gh/kevinburke/go-circle)
 
 This is a very incomplete wrapper for the CircleCI API. Currently we use it to
 fetch the latest build for a branch.
@@ -18,7 +18,7 @@ this:
 ```toml
 [organizations]
 
-    [organizations.Shyp]
+    [organizations.kevinburke]
     token = "aabbccddeeff00"
 ```
 
@@ -26,20 +26,15 @@ You can specify any org name you want.
 
 ## Installation
 
-If you just want the binary, [download it from Equinox.io][download] and place
-the `circle` file somewhere on your `$PATH`.
-
 If you want to install the project, first set your `$GOPATH` in your
-environment (I set it to `~/code/go`), then run
+environment (I set it to `$HOME`), then run
 
 ```
-go install github.com/Shyp/go-circle/...
+go install github.com/kevinburke/go-circle/...
 ```
 
 This should place a `circle` binary in `$GOPATH/bin`, so for me,
-`~/code/go/bin/circle`.
-
-[download]: https://dl.equinox.io/shyp/circle/stable
+`~/bin/circle`.
 
 ## Wait for tests to pass/fail on a branch
 
