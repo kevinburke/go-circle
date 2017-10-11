@@ -149,12 +149,14 @@ func doRebuild(flags *flag.FlagSet) error {
 
 func main() {
 	waitflags := flag.NewFlagSet("wait", flag.ExitOnError)
+	waitRemote := waitflags.String("remote", "origin", "Git remote to use")
 	waitflags.Usage = func() {
 		fmt.Fprintf(os.Stderr, `usage: wait [refspec]
 
 Wait for builds to complete, then print a descriptive output on success or
 failure. By default, waits on the current branch, otherwise you can pass a
 branch to wait for.
+
 `)
 		waitflags.PrintDefaults()
 	}
@@ -208,7 +210,7 @@ Rebuild a given test branch
 		args := waitflags.Args()
 		branch, err := getBranchFromArgs(args)
 		checkError(err)
-		err = wait.Wait(branch)
+		err = wait.Wait(branch, *waitRemote)
 		checkError(err)
 	case "download-artifacts":
 		if len(args) == 1 {

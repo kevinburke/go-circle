@@ -72,8 +72,8 @@ func getMinTipLength(remoteTip string, localTip string) int {
 	return minTipLength
 }
 
-func Wait(branch string) error {
-	remote, err := git.GetRemoteURL("origin")
+func Wait(branch, remoteStr string) error {
+	remote, err := git.GetRemoteURL(remoteStr)
 	if err != nil {
 		return err
 	}
