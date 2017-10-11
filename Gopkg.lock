@@ -8,11 +8,6 @@
   version = "v0.3.0"
 
 [[projects]]
-  name = "github.com/Shyp/go-git"
-  packages = ["."]
-  revision = "a5ce5402a5653951dc00560d835549d12d08652d"
-
-[[projects]]
   branch = "master"
   name = "github.com/atotto/clipboard"
   packages = ["."]
@@ -68,6 +63,11 @@
   packages = ["."]
   revision = "fd72dcfb912b32532896bbc98413e5bd425eb315"
   version = "0.2"
+
+[[projects]]
+  name = "github.com/kevinburke/go-git"
+  packages = ["."]
+  revision = "da65f3cfe562df3928c9fd53b24030389ba00cd7"
 
 [[projects]]
   name = "github.com/kevinburke/go-types"
@@ -161,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7d161dd92d5820000dbdcb4572c764c5a42b30b063af650989428fbbed8cd406"
+  inputs-digest = "dd8295282752a1ad17deae758766e487f4fa054fc269115bdb81befd63573dc2"
   solver-name = "gps-cdcl"
   solver-version = 1

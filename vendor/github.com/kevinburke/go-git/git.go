@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/github/hub/commands"
 )
+
+const version = "0.4"
 
 type GitFormat int
 
@@ -21,10 +22,10 @@ const (
 
 // Short ssh style doesn't allow a custom port
 // http://stackoverflow.com/a/5738592/329700
-var sshExp = regexp.MustCompile("^(?P<sshUser>[^@]+)@(?P<domain>[^:]+):(?P<pathRepo>.*)\\.git/?$")
+var sshExp = regexp.MustCompile(`^(?P<sshUser>[^@]+)@(?P<domain>[^:]+):(?P<pathRepo>.*)(\.git/?)?$`)
 
 // https://github.com/Shyp/shyp_api.git
-var httpsExp = regexp.MustCompile("^https://(?P<domain>[^/:]+)(:(?P<port>[[0-9]+))?/(?P<pathRepo>.+?)(\\.git/?)?$")
+var httpsExp = regexp.MustCompile(`^https://(?P<domain>[^/:]+)(:(?P<port>[[0-9]+))?/(?P<pathRepo>.+?)(\.git/?)?$`)
 
 // A remote URL. Easiest to describe with an example:
 //
@@ -64,15 +65,23 @@ type RemoteURL struct {
 }
 
 func getPathAndRepoName(pathAndRepo string) (string, string) {
+	if strings.HasSuffix(pathAndRepo, "/") {
+		pathAndRepo = pathAndRepo[:len(pathAndRepo)-1]
+	}
 	paths := strings.Split(pathAndRepo, "/")
 	repoName := paths[len(paths)-1]
 	path := strings.Join(paths[:len(paths)-1], "/")
+	// there is probably a way to put this in the regex.
+	if strings.HasSuffix(repoName, ".git") {
+		repoName = repoName[:len(repoName)-len(".git")]
+	}
 	return path, repoName
 }
 
 // ParseRemoteURL takes a git remote URL and returns an object with its
 // component parts, or an error if the remote cannot be parsed
 func ParseRemoteURL(remoteURL string) (*RemoteURL, error) {
+	remoteURL = strings.TrimSpace(remoteURL)
 	match := sshExp.FindStringSubmatch(remoteURL)
 	if len(match) > 0 {
 		path, repoName := getPathAndRepoName(match[3])
@@ -135,27 +144,6 @@ func CurrentBranch() (string, error) {
 	return strings.TrimSpace(string(result)), nil
 }
 
-func getLastCommitMessage() (string, error) {
-	result, err := exec.Command("git", "log", "-1", "--pretty=%B").Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(result)), nil
-}
-
-// CreateAndOpenPullRequest creates a PR on Github and opens it up in your browser
-// Returns an error if you are not on a branch, or if you are not in a git repository.
-func CreateAndOpenPullRequest() error {
-	message, err := getLastCommitMessage()
-	if err != nil {
-		return err
-	}
-	cmd := commands.CmdRunner.Lookup("pull-request")
-	args := commands.NewArgs([]string{"pull-request", "-m", message, "-o"})
-	execError := commands.CmdRunner.Call(cmd, args)
-	return execError.Err
-}
-
 // Tip returns the SHA of the given Git branch. If the empty string is
 // provided, defaults to HEAD on the current branch.
 func Tip(branch string) (string, error) {
@@ -173,9 +161,12 @@ func Tip(branch string) (string, error) {
 }
 
 // Root returns the root directory of the current Git repository, or an error
-// if you are not in a git repository.
-func Root() (string, error) {
-	result, err := exec.Command("git", "rev-parse", "--show-toplevel").CombinedOutput()
+// if you are not in a git repository. If directory is not the empty string,
+// change the working directory before running the command.
+func Root(directory string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = filepath.Dir(directory)
+	result, err := cmd.CombinedOutput()
 	trimmed := strings.TrimSpace(string(result))
 	if err != nil {
 		return "", errors.New(trimmed)

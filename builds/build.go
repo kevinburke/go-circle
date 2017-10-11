@@ -3,8 +3,8 @@ package build
 import (
 	"fmt"
 
-	"github.com/Shyp/go-git"
 	"github.com/kevinburke/go-circle"
+	"github.com/kevinburke/go-git"
 )
 
 // GetBuilds gets the status of the 5 most recent Circle builds for a branch

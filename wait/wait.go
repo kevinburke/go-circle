@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Shyp/go-git"
 	"github.com/kevinburke/bigtext"
 	"github.com/kevinburke/go-circle"
+	"github.com/kevinburke/go-git"
 )
 
 func roundDuration(d time.Duration, unit time.Duration) time.Duration {

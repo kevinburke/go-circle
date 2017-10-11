@@ -10,8 +10,8 @@ required = [
   version = "0.3.0"
 
 [[constraint]]
-  name = "github.com/Shyp/go-git"
-  revision = "a5ce5402a5653951dc00560d835549d12d08652d"
+  name = "github.com/kevinburke/go-git"
+  revision = "da65f3cfe562df3928c9fd53b24030389ba00cd7"
 
 [[constraint]]
   name = "github.com/github/hub"
