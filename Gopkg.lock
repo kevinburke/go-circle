@@ -8,12 +8,6 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/equinox-io/equinox"
-  packages = [".","internal/go-update","internal/go-update/internal/binarydist","internal/go-update/internal/osext","internal/osext","proto"]
-  revision = "f24972fa72facf59d05c91c848b65eac38815915"
-
-[[projects]]
   name = "github.com/go-stack/stack"
   packages = ["."]
   revision = "817915b46b97fd7bb80e8ab6b69f01a53ac3eebf"
@@ -105,6 +99,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6304123a7a4fc9ce4f731adbf242ce0bab1d41a59f636fc7f51798fa5f49fd09"
+  inputs-digest = "e36438b566fb5481609095a82b9eadd36ad1cf51ee3cb64002fefbe34c26b898"
   solver-name = "gps-cdcl"
   solver-version = 1

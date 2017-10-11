@@ -27,7 +27,6 @@ The commands are:
 	enable              Enable CircleCI tests for this project.
 	open                Open the latest branch build in a browser.
 	rebuild             Rebuild a given test branch.
-	update              Update to the latest version
 	version             Print the current version
 	wait                Wait for tests to finish on a branch.
 	download-artifacts  Download all artifacts.
@@ -198,9 +197,6 @@ Rebuild a given test branch
 	case "rebuild":
 		rebuildflags.Parse(subargs)
 		err := doRebuild(rebuildflags)
-		checkError(err)
-	case "update":
-		err := equinoxUpdate()
 		checkError(err)
 	case "version":
 		fmt.Fprintf(os.Stderr, "circle version %s\n", circle.VERSION)
