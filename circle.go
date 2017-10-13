@@ -30,7 +30,7 @@ func init() {
 	v11client = rest.NewClient("", "", v11BaseUri)
 }
 
-const VERSION = "0.24"
+const VERSION = "0.23"
 const baseUri = "https://circleci.com/api/v1/project"
 const v11BaseUri = "https://circleci.com/api/v1.1/project"
 
