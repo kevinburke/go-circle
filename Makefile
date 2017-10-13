@@ -2,6 +2,7 @@
 
 MEGACHECK := $(GOPATH)/bin/megacheck
 BUMP_VERSION := $(GOPATH)/bin/bump_version
+WRITE_MAILMAP := $(GOPATH)/bin/write_mailmap
 
 install:
 	go install ./...
@@ -28,3 +29,12 @@ release: $(BUMP_VERSION)
 	$(BUMP_VERSION) minor circle.go
 	git push origin master
 	git push origin master --tags
+
+$(WRITE_MAILMAP):
+	go get -u github.com/kevinburke/write_mailmap
+
+AUTHORS.txt: | $(WRITE_MAILMAP)
+	$(WRITE_MAILMAP) > AUTHORS.txt
+
+authors: AUTHORS.txt
+	write_mailmap > AUTHORS.txt
