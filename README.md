@@ -26,11 +26,17 @@ You can specify any org name you want.
 
 ## Installation
 
-If you want to install the project, first set your `$GOPATH` in your
-environment (I set it to `$HOME`), then run
+Find your target operating system (darwin, windows, linux) and desired bin
+directory, and modify the command below as appropriate:
+
+    curl --silent --location --output=/usr/local/bin/circle https://github.com/kevinburke/circle/releases/download/0.22/circle-linux-amd64 && chmod 755 /usr/local/bin/circle
+
+The latest version is 0.22.
+
+If you have a Go development environment, you can also install via source code:
 
 ```
-go install github.com/kevinburke/go-circle/...
+go get -u github.com/kevinburke/go-circle/...
 ```
 
 This should place a `circle` binary in `$GOPATH/bin`, so for me,
