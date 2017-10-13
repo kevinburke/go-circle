@@ -217,6 +217,7 @@ Rebuild a given test branch
 		err := doDownload(downloadflags)
 		checkError(err)
 	default:
+		fmt.Fprintf(os.Stderr, "circle: unknown command %q\n\n", flag.Arg(0))
 		usage()
 	}
 }
