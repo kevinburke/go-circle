@@ -34,11 +34,11 @@ func (cb *CircleBuild) Statistics() string {
 	}
 	b.WriteString(fmt.Sprintf("\n%s\n", strings.Repeat("=", l)))
 	for _, step := range cb.Steps {
-		var stepName string
-		if len(step.Name) > stepWidth-2 {
-			stepName = fmt.Sprintf("%s… ", step.Name[:(stepWidth-2)])
+		stepName := strings.Replace(step.Name, "\n", "\\n", -1)
+		if len(stepName) > stepWidth-2 {
+			stepName = fmt.Sprintf("%s… ", stepName[:(stepWidth-2)])
 		} else {
-			stepName = fmt.Sprintf(stepPadding, step.Name)
+			stepName = fmt.Sprintf(stepPadding, stepName)
 		}
 		b.WriteString(stepName)
 		for _, action := range step.Actions {
