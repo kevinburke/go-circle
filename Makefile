@@ -41,10 +41,10 @@ endif
 	GOOS=darwin GOARCH=amd64 go build -o releases/$(version)/circle-darwin-amd64 ./circle
 	GOOS=windows GOARCH=amd64 go build -o releases/$(version)/circle-windows-amd64 ./circle
 	# These commands are not idempotent, so ignore failures if an upload repeats
-	$(RELEASE) release --user kevinburke --repo circle --tag $(version) || true
-	$(RELEASE) upload --user kevinburke --repo circle --tag $(version) --name circle-linux-amd64 --file releases/$(version)/circle-linux-amd64 || true
-	$(RELEASE) upload --user kevinburke --repo circle --tag $(version) --name circle-darwin-amd64 --file releases/$(version)/circle-darwin-amd64 || true
-	$(RELEASE) upload --user kevinburke --repo circle --tag $(version) --name circle-windows-amd64 --file releases/$(version)/circle-windows-amd64 || true
+	$(RELEASE) release --user kevinburke --repo go-circle --tag $(version) || true
+	$(RELEASE) upload --user kevinburke --repo go-circle --tag $(version) --name circle-linux-amd64 --file releases/$(version)/circle-linux-amd64 || true
+	$(RELEASE) upload --user kevinburke --repo go-circle --tag $(version) --name circle-darwin-amd64 --file releases/$(version)/circle-darwin-amd64 || true
+	$(RELEASE) upload --user kevinburke --repo go-circle --tag $(version) --name circle-windows-amd64 --file releases/$(version)/circle-windows-amd64 || true
 
 $(WRITE_MAILMAP):
 	go get -u github.com/kevinburke/write_mailmap
