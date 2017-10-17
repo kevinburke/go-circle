@@ -23,6 +23,30 @@ func round(f float64) int {
 	return int(f + 0.5)
 }
 
+func shouldPrint(lastPrinted time.Time, duration time.Duration, latestBuild circle.TreeBuild) bool {
+	now := time.Now()
+	buildDuration := time.Duration(latestBuild.Previous.BuildDurationMs) * time.Millisecond
+	var durToUse time.Duration
+	if duration < time.Minute {
+		// First minute, errors are slightly more likely.
+		durToUse = 7 * time.Second
+	} else {
+		timeRemaining := buildDuration - duration
+		if timeRemaining > 8*time.Minute {
+			durToUse = 30 * time.Second
+		} else if timeRemaining > 5*time.Minute {
+			durToUse = 30 * time.Second
+		} else if timeRemaining > 3*time.Minute {
+			durToUse = 20 * time.Second
+		} else if timeRemaining > time.Minute {
+			durToUse = 15 * time.Second
+		} else {
+			durToUse = 10 * time.Second
+		}
+	}
+	return lastPrinted.Add(durToUse).Before(now)
+}
+
 // getEffectiveCost returns the cost in cents to pay an average San
 // Francisco-based engineer to wait for the amount of time specified by d.
 func getEffectiveCost(d time.Duration) int {
@@ -84,11 +108,13 @@ func Wait(branch, remoteStr string) error {
 	fmt.Println("Waiting for latest build on", branch, "to complete")
 	// Give CircleCI a little bit of time to start
 	time.Sleep(1 * time.Second)
+	var lastPrintedAt time.Time
 	for {
 		cr, err := circle.GetTree(remote.Path, remote.RepoName, branch)
 		if err != nil {
 			if isHttpError(err) {
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
+				lastPrintedAt = time.Now()
 				time.Sleep(2 * time.Second)
 				continue
 			}
@@ -103,6 +129,7 @@ func Wait(branch, remoteStr string) error {
 		if latestBuild.VCSRevision[:maxTipLengthToCompare] != tip[:maxTipLengthToCompare] {
 			fmt.Printf("Latest build in Circle is %s, waiting for %s...\n",
 				latestBuild.VCSRevision[:maxTipLengthToCompare], tip[:maxTipLengthToCompare])
+			lastPrintedAt = time.Now()
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -136,7 +163,8 @@ func Wait(branch, remoteStr string) error {
 			}
 			c.Display(branch + " build complete!")
 			break
-		} else if latestBuild.Failed() {
+		}
+		if latestBuild.Failed() {
 			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
 			if err == nil {
 				fmt.Print(build.Statistics())
@@ -161,50 +189,29 @@ func Wait(branch, remoteStr string) error {
 			}
 			c.Display("build failed")
 			return err
-		} else {
-			if latestBuild.Status == "running" {
+		}
+		if latestBuild.Status == "running" {
+			// Show more and more output as we approach the duration of the previous
+			// successful build.
+			if shouldPrint(lastPrintedAt, duration, latestBuild) {
 				fmt.Printf("Running (%s elapsed)\n", duration.String())
-			} else if latestBuild.NotRunning() {
-				cost := getEffectiveCost(duration)
-				centsPortion := cost % 100
-				dollarPortion := cost / 100
-				costStr := fmt.Sprintf("$%d.%.2d", dollarPortion, centsPortion)
+				lastPrintedAt = time.Now()
+			}
+		} else if latestBuild.NotRunning() {
+			cost := getEffectiveCost(duration)
+			centsPortion := cost % 100
+			dollarPortion := cost / 100
+			costStr := fmt.Sprintf("$%d.%.2d", dollarPortion, centsPortion)
+			if lastPrintedAt.Add(12 * time.Second).Before(time.Now()) {
 				fmt.Printf("Status is %s (queued for %s, cost %s), trying again\n",
 					latestBuild.Status, duration.String(), costStr)
-			} else {
-				fmt.Printf("Status is %s, trying again\n", latestBuild.Status)
+				lastPrintedAt = time.Now()
 			}
-			// Sleep less and less as we approach the duration of the previous
-			// successful build
-			buildDuration := time.Duration(latestBuild.Previous.BuildDurationMs) * time.Millisecond
-			if latestBuild.Previous.Status == "success" || latestBuild.Previous.Status == "fixed" {
-				if duration < time.Minute {
-					// First minute, errors are slightly more likely.
-					time.Sleep(5 * time.Second)
-				} else {
-					timeRemaining := buildDuration - duration
-					if timeRemaining > 5*time.Minute {
-						time.Sleep(30 * time.Second)
-					} else if timeRemaining > 3*time.Minute {
-						time.Sleep(20 * time.Second)
-					} else if timeRemaining > time.Minute {
-						time.Sleep(15 * time.Second)
-					} else if timeRemaining > 30*time.Second {
-						time.Sleep(10 * time.Second)
-					} else if timeRemaining > 10*time.Second {
-						time.Sleep(5 * time.Second)
-					} else {
-						time.Sleep(3 * time.Second)
-					}
-				}
-			} else {
-				if float32(duration) < (2.5 * float32(time.Minute)) {
-					time.Sleep(10 * time.Second)
-				} else {
-					time.Sleep(5 * time.Second)
-				}
-			}
+		} else {
+			fmt.Printf("Status is %s, trying again\n", latestBuild.Status)
+			lastPrintedAt = time.Now()
 		}
+		time.Sleep(3 * time.Second)
 	}
 	return nil
 }

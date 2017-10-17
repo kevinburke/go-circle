@@ -2,12 +2,9 @@
 
 [![CircleCI](https://circleci.com/gh/kevinburke/go-circle.svg?style=svg)](https://circleci.com/gh/kevinburke/go-circle)
 
-This is a very incomplete wrapper for the CircleCI API. Currently we use it to
-fetch the latest build for a branch.
-
-You should treat the API as very unstable, library API's that grow from one or
-two methods to the whole API tend to not be designed very well, so probably at
-some point you will have to create a Client instance or something.
+This is a wrapper for the CircleCI API. Currently we use it to fetch the latest
+build for a branch, and wait for tests to finish on that branch. This fork
+exists because I left Shyp and wanted to keep developing the tool.
 
 ## Token Management
 
