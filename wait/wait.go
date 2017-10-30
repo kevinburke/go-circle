@@ -168,7 +168,7 @@ func Wait(branch, remoteStr string) error {
 			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
 			if err == nil {
 				fmt.Print(build.Statistics())
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 				texts, textsErr := build.FailureTexts(ctx)
 				if textsErr != nil {
 					fmt.Printf("error getting build failures: %v\n", textsErr)

@@ -28,6 +28,8 @@ func init() {
 		Timeout: 10 * time.Second,
 	}
 	v11client = rest.NewClient("", "", v11BaseUri)
+	// use Context to set a timeout on this client
+	v11client.Client.Timeout = 0
 }
 
 const VERSION = "0.25"
