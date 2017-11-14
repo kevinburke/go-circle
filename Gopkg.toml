@@ -23,6 +23,10 @@
   version = "1.0.0"
 
 [[constraint]]
+  name = "github.com/inconshreveable/log15"
+  version = "2.13"
+
+[[constraint]]
   branch = "master"
   name = "github.com/skratchdot/open-golang"
 
