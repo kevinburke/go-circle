@@ -1,0 +1,36 @@
+load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_library", "go_test")
+
+gazelle(
+    name = "gazelle",
+    prefix = "github.com/kevinburke/go-circle",
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "build_statistics.go",
+        "circle.go",
+        "token.go",
+        "types.go",
+    ],
+    importpath = "github.com/kevinburke/go-circle",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_BurntSushi_toml//:go_default_library",
+        "@com_github_kevinburke_go_types//:go_default_library",
+        "@com_github_kevinburke_rest//:go_default_library",
+        "@org_golang_x_crypto//ssh/terminal:go_default_library",
+        "@org_golang_x_sync//errgroup:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "circle_test.go",
+        "token_test.go",
+        "types_test.go",
+    ],
+    importpath = "github.com/kevinburke/go-circle",
+    library = ":go_default_library",
+)

@@ -5,6 +5,8 @@ BUMP_VERSION := $(GOPATH)/bin/bump_version
 WRITE_MAILMAP := $(GOPATH)/bin/write_mailmap
 RELEASE := $(GOPATH)/bin/github-release
 
+TESTS := //:go_default_test //wait:go_default_test
+
 build:
 	go get ./...
 	go build ./...
@@ -17,7 +19,18 @@ lint: $(MEGACHECK)
 	go list ./... | grep -v vendor | xargs $(MEGACHECK) --ignore='github.com/kevinburke/go-circle/*.go:S1002'
 
 test: lint
-	go test -v -race ./...
+	bazel test \
+		--deleted_packages=vendor \
+		--experimental_repository_cache="$$HOME/.bzrepos" \
+		--test_output=errors $(TESTS)
+
+race-test: lint
+	bazel test \
+		--experimental_repository_cache="$$HOME/.bzrepos" \
+		--spawn_strategy=remote \
+		--strategy=Closure=remote \
+		--strategy=Javac=remote \
+		--test_output=errors --features=race $(TESTS)
 
 $(BUMP_VERSION):
 	go get -u github.com/Shyp/bump_version
