@@ -5,8 +5,6 @@ BUMP_VERSION := $(GOPATH)/bin/bump_version
 WRITE_MAILMAP := $(GOPATH)/bin/write_mailmap
 RELEASE := $(GOPATH)/bin/github-release
 
-TESTS := //:go_default_test //wait:go_default_test
-
 build:
 	go get ./...
 	go build ./...
@@ -19,18 +17,10 @@ lint: $(MEGACHECK)
 	go list ./... | grep -v vendor | xargs $(MEGACHECK) --ignore='github.com/kevinburke/go-circle/*.go:S1002'
 
 test: lint
-	bazel test \
-		--deleted_packages=vendor \
-		--experimental_repository_cache="$$HOME/.bzrepos" \
-		--test_output=errors $(TESTS)
+	go test ./...
 
 race-test: lint
-	bazel test \
-		--experimental_repository_cache="$$HOME/.bzrepos" \
-		--spawn_strategy=remote \
-		--strategy=Closure=remote \
-		--strategy=Javac=remote \
-		--test_output=errors --features=race $(TESTS)
+	go test -race ./...
 
 $(BUMP_VERSION):
 	go get -u github.com/Shyp/bump_version
@@ -66,4 +56,10 @@ AUTHORS.txt: | $(WRITE_MAILMAP)
 	$(WRITE_MAILMAP) > AUTHORS.txt
 
 authors: AUTHORS.txt
-	write_mailmap > AUTHORS.txt
+	$(WRITE_MAILMAP) > AUTHORS.txt
+	$(BUMP_VERSION) minor circle.go
+	git push origin master
+	git push origin master --tags
+
+equinox:
+	cd circle && equinox release --version $(git log -1 --pretty=%B) --token $(cat ../cfg/equinox) --app app_n7HhD13kpUR --platforms darwin_amd64,linux_amd64 --signing-key ../cfg/equinox.key
