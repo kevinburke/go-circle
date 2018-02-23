@@ -62,4 +62,4 @@ authors: AUTHORS.txt
 	git push origin master --tags
 
 equinox:
-	cd circle && equinox release --version $(git log -1 --pretty=%B) --token $(cat ../cfg/equinox) --app app_n7HhD13kpUR --platforms darwin_amd64,linux_amd64 --signing-key ../cfg/equinox.key
+	cd circle && equinox release --version "$(shell git log -1 --pretty=%B)" --token "$(shell cat ../cfg/equinox)" --app app_n7HhD13kpUR --platforms darwin_amd64,linux_amd64 --signing-key ../cfg/equinox.key
