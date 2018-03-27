@@ -5,6 +5,9 @@ BUMP_VERSION := $(GOPATH)/bin/bump_version
 WRITE_MAILMAP := $(GOPATH)/bin/write_mailmap
 RELEASE := $(GOPATH)/bin/github-release
 
+install:
+	go install ./...
+
 build:
 	go get ./...
 	go build ./...
@@ -57,9 +60,9 @@ AUTHORS.txt: | $(WRITE_MAILMAP)
 
 authors: AUTHORS.txt
 	$(WRITE_MAILMAP) > AUTHORS.txt
+
+release: test | $(BUMP_VERSION)
+	git checkout master
 	$(BUMP_VERSION) minor circle.go
 	git push origin master
 	git push origin master --tags
-
-equinox:
-	cd circle && equinox release --version "$(shell git log -1 --pretty=%B)" --token "$(shell cat cfg/equinox)" --app app_n7HhD13kpUR --platforms darwin_amd64,linux_amd64 --signing-key ../cfg/equinox.key

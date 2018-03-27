@@ -257,7 +257,7 @@ func Enable(ctx context.Context, host string, org string, repoName string) error
 	if err := v11client.Do(req, fr); err != nil {
 		return err
 	}
-	if fr.Following == false {
+	if !fr.Following {
 		return errors.New("not following the project")
 	}
 	return nil
@@ -338,8 +338,10 @@ func GetArtifactsForBuild(org string, project string, buildNum int) ([]*CircleAr
 		r = body
 	}
 	var arts []*CircleArtifact
-	decodeErr := json.NewDecoder(r).Decode(&arts)
-	return arts, decodeErr
+	if err = json.NewDecoder(r).Decode(&arts); err != nil {
+		return nil, err
+	}
+	return arts, nil
 }
 
 func DownloadArtifact(artifact *CircleArtifact, directory string, org string) error {
