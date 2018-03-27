@@ -3,9 +3,15 @@ jobs:
   build:
     working_directory: /go/src/github.com/kevinburke/go-circle
     docker:
-      - image: golang:1.9
+      - image: golang:1.10
 
     steps:
       - checkout
-      - run:
-          command: make test
+      - restore_cache:
+          keys:
+            - v1-pkg-cache
+      - run: make race-test
+      - save_cache:
+          key: v1-pkg-cache
+          paths:
+            - "/go/pkg"
