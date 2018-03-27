@@ -1,7 +1,9 @@
 package circle
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -41,19 +43,33 @@ Go to https://circleci.com/account/api if you need to create a token.
 }
 
 func getToken(orgName string) (string, error) {
-	user, err := user.Current()
-	if err != nil {
-		return "", err
+	var filename string
+	var f io.ReadCloser
+	var err error
+	checkedLocations := make([]string, 1)
+	if cfg, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
+		filename = filepath.Join(cfg, "circleci")
+		f, err = os.Open(filename)
+		checkedLocations[0] = filename
+	} else {
+		var homeDir string
+		user, userErr := user.Current()
+		if userErr == nil {
+			homeDir = user.HomeDir
+		} else {
+			homeDir = os.Getenv("HOME")
+		}
+		filename = filepath.Join(homeDir, "cfg", "circleci")
+		f, err = os.Open(filename)
+		checkedLocations[0] = filename
+		if err != nil { //fallback
+			rcFilename := filepath.Join(homeDir, ".circlerc")
+			f, err = os.Open(rcFilename)
+			checkedLocations = append(checkedLocations, rcFilename)
+		}
 	}
-	filename := filepath.Join(user.HomeDir, "cfg", "circleci")
-	f, err := os.Open(filename)
-	rcFilename := ""
 	if err != nil {
-		rcFilename = filepath.Join(user.HomeDir, ".circlerc")
-		f, err = os.Open(rcFilename)
-	}
-	if err != nil {
-		err = fmt.Errorf(`Couldn't find a config file in %s or %s.
+		err = fmt.Errorf(`Couldn't find a config file in %s.
 
 Add a configuration file with your CircleCI token, like this:
 
@@ -63,11 +79,12 @@ Add a configuration file with your CircleCI token, like this:
     token = "aabbccddeeff00"
 
 Go to https://circleci.com/account/api if you need to create a token.
-`, filename, rcFilename)
+`, strings.Join(checkedLocations, " or "))
 		return "", err
 	}
+	defer f.Close()
 	var c CircleConfig
-	_, err = toml.DecodeReader(f, &c)
+	_, err = toml.DecodeReader(bufio.NewReader(f), &c)
 	if err != nil {
 		return "", err
 	}
