@@ -24,7 +24,9 @@ race-test:
 	bazel test --test_output=errors --features=race //...
 
 ci:
-	bazel test --noshow_progress --noshow_loading_progress --test_output=errors \
+	bazel --batch test \
+		--noshow_progress --noshow_loading_progress \
+		--test_output=errors \
 		--features=race //...
 
 $(BUMP_VERSION):

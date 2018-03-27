@@ -21,7 +21,6 @@ func init() {
 		Output:       os.Stderr,
 	}
 	defaultHttpClient = &http.Client{
-		Timeout:   defaultTimeout,
 		Transport: DefaultTransport,
 	}
 }

@@ -7,8 +7,8 @@ dist: trusty
 sudo: required
 
 before_script:
-     - wget "https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_0.5.4_amd64.deb"
-     - sudo dpkg --force-all -i bazel_0.5.4_amd64.deb
+     - wget "https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_0.9.0_amd64.deb"
+     - sudo dpkg --force-all -i bazel_0.9.0_amd64.deb
 
 script:
   - make ci

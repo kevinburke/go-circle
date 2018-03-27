@@ -21,9 +21,7 @@ var JSON UploadType = "application/json"
 // FormURLEncoded specifies you'd like to upload form-urlencoded data.
 var FormURLEncoded UploadType = "application/x-www-form-urlencoded"
 
-const Version = "1.0"
-
-var defaultTimeout = 6500 * time.Millisecond
+const Version = "2.0"
 
 var ua string
 
@@ -35,21 +33,25 @@ func init() {
 
 // Client is a generic Rest client for making HTTP requests.
 type Client struct {
-	ID     string
-	Token  string
+	// Username for use in HTTP Basic Auth
+	ID string
+	// Password for use in HTTP Basic Auth
+	Token string
+	// HTTP Client to use for making requests
 	Client *http.Client
-	Base   string
+	// The base URL for all requests to this API, for example,
+	// "https://fax.twilio.com/v1"
+	Base string
 	// Set UploadType to JSON or FormURLEncoded to control how data is sent to
-	// the server.
+	// the server. Defaults to FormURLEncoded.
 	UploadType UploadType
 	// ErrorParser is invoked when the client gets a 400-or-higher status code
-	// from the server.
+	// from the server. Defaults to rest.DefaultErrorParser.
 	ErrorParser func(*http.Response) error
 }
 
 // NewClient returns a new Client with the given user and password. Base is the
-// scheme+domain to hit for all requests. By default, the request timeout is
-// set to 6.5 seconds.
+// scheme+domain to hit for all requests.
 func NewClient(user, pass, base string) *Client {
 	return &Client{
 		ID:          user,
@@ -167,10 +169,10 @@ func (c *Client) Do(r *http.Request, v interface{}) error {
 // it cannot do so, return an error containing the entire response body.
 func DefaultErrorParser(resp *http.Response) error {
 	resBody, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	rerr := new(Error)
 	err = json.Unmarshal(resBody, rerr)
 	if err != nil {
@@ -179,7 +181,7 @@ func DefaultErrorParser(resp *http.Response) error {
 	if rerr.Title == "" {
 		return fmt.Errorf("invalid response body: %s", string(resBody))
 	} else {
-		rerr.StatusCode = resp.StatusCode
+		rerr.Status = resp.StatusCode
 		return rerr
 	}
 }

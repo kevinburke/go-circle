@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/satori/go.uuid"
+	"github.com/kevinburke/go.uuid"
 	"gopkg.in/mgo.v2/bson"
 )
 
