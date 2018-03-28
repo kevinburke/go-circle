@@ -32,7 +32,7 @@ func init() {
 	v11client.Client.Timeout = 0
 }
 
-const VERSION = "0.28"
+const VERSION = "0.29"
 const baseUri = "https://circleci.com/api/v1/project"
 const v11BaseUri = "https://circleci.com/api/v1.1/project"
 
