@@ -102,7 +102,6 @@ func (cb CircleBuild) Failures() [][2]int {
 				} else {
 					failures = append(failures, [...]int{i, j})
 				}
-				failures = append(failures, [...]int{i, j})
 			}
 		}
 	}
