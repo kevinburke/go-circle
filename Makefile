@@ -60,9 +60,3 @@ AUTHORS.txt: | $(WRITE_MAILMAP)
 
 authors: AUTHORS.txt
 	$(WRITE_MAILMAP) > AUTHORS.txt
-
-release: test | $(BUMP_VERSION)
-	git checkout master
-	$(BUMP_VERSION) minor circle.go
-	git push origin master
-	git push origin master --tags
