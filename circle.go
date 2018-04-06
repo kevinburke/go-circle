@@ -343,7 +343,7 @@ func GetArtifactsForBuild(org string, project string, buildNum int) ([]*CircleAr
 	return arts, nil
 }
 
-func DownloadArtifact(artifact *CircleArtifact, directory string, org string) error {
+func DownloadArtifact(ctx context.Context, artifact *CircleArtifact, directory string, org string) error {
 	token, err := getToken(org)
 	if err != nil {
 		return err

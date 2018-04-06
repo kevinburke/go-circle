@@ -90,13 +90,17 @@ func doDownload(flags *flag.FlagSet) error {
 	}
 	remote, err := git.GetRemoteURL("origin")
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting remote URL for remote %q: %v\n", "origin", err)
 		return err
 	}
 	arts, err := circle.GetArtifactsForBuild(remote.Path, remote.RepoName, val)
 	if err != nil {
 		return err
 	}
-	var g errgroup.Group
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	g, errctx := errgroup.WithContext(ctx)
+
 	tempDir, err := ioutil.TempDir("", "circle-artifacts")
 	if err != nil {
 		return err
@@ -104,7 +108,7 @@ func doDownload(flags *flag.FlagSet) error {
 	for _, art := range arts {
 		art := art
 		g.Go(func() error {
-			return circle.DownloadArtifact(art, tempDir, remote.Path)
+			return circle.DownloadArtifact(errctx, art, tempDir, remote.Path)
 		})
 	}
 
