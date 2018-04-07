@@ -27,22 +27,20 @@ func shouldPrint(lastPrinted time.Time, duration time.Duration, latestBuild circ
 	now := time.Now()
 	buildDuration := time.Duration(latestBuild.Previous.BuildDurationMs) * time.Millisecond
 	var durToUse time.Duration
-	if duration < time.Minute {
-		// First minute, errors are slightly more likely.
-		durToUse = 7 * time.Second
-	} else {
-		timeRemaining := buildDuration - duration
-		if timeRemaining > 8*time.Minute {
-			durToUse = 30 * time.Second
-		} else if timeRemaining > 5*time.Minute {
-			durToUse = 30 * time.Second
-		} else if timeRemaining > 3*time.Minute {
-			durToUse = 20 * time.Second
-		} else if timeRemaining > time.Minute {
-			durToUse = 15 * time.Second
-		} else {
-			durToUse = 10 * time.Second
-		}
+	timeRemaining := buildDuration - duration
+	switch {
+	case timeRemaining > 25*time.Minute:
+		durToUse = 3 * time.Minute
+	case timeRemaining > 8*time.Minute:
+		durToUse = 2 * time.Minute
+	case timeRemaining > 5*time.Minute:
+		durToUse = 30 * time.Second
+	case timeRemaining > 3*time.Minute:
+		durToUse = 20 * time.Second
+	case timeRemaining > time.Minute:
+		durToUse = 15 * time.Second
+	default:
+		durToUse = 10 * time.Second
 	}
 	return lastPrinted.Add(durToUse).Before(now)
 }
