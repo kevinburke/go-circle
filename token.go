@@ -75,7 +75,7 @@ Add a configuration file with your CircleCI token, like this:
 
 [organizations]
 
-    [organizations.Shyp]
+    [organizations.kevinburke]
     token = "aabbccddeeff00"
 
 Go to https://circleci.com/account/api if you need to create a token.

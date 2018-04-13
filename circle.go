@@ -131,7 +131,7 @@ func (cb CircleBuild) FailureTexts(ctx context.Context) ([]string, error) {
 		i := i
 		group.Go(func() error {
 			// URL we are trying to fetch looks like:
-			// https://circleci.com/api/v1.1/project/github/Shyp/go-circle/11/output/9/0
+			// https://circleci.com/api/v1.1/project/github/kevinburke/go-circle/11/output/9/0
 			uri := fmt.Sprintf("/%s/%s/%s/%d/output/%d/%d?circle-token=%s", cb.VCSType, cb.Username, cb.RepoName, cb.BuildNum, failure[0], failure[1], token)
 			req, err := v11client.NewRequest("GET", uri, nil)
 			if err != nil {

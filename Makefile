@@ -26,7 +26,7 @@ race-test: lint
 	go test -race ./...
 
 $(BUMP_VERSION):
-	go get -u github.com/Shyp/bump_version
+	go get -u github.com/kevinburke/bump_version
 
 $(RELEASE):
 	go get -u github.com/aktau/github-release
