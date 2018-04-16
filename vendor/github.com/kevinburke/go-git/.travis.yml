@@ -4,15 +4,19 @@ language: go
 
 os: linux
 dist: trusty
-
-sudo: required
+sudo: false
 
 before_script:
-  - make install-travis
+  - go get -t -u ./...
 
 script:
-  - make ci
+  - make race-test
+
+go:
+  - 1.9.x
+  - 1.10.x
+  - master
 
 cache:
   directories:
-    - $HOME/.bzrepos
+    - $GOPATH/pkg

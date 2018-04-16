@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const version = "0.4"
+const version = "0.6"
 
 type GitFormat int
 
@@ -24,29 +24,29 @@ const (
 // http://stackoverflow.com/a/5738592/329700
 var sshExp = regexp.MustCompile(`^(?P<sshUser>[^@]+)@(?P<domain>[^:]+):(?P<pathRepo>.*)(\.git/?)?$`)
 
-// https://github.com/Shyp/shyp_api.git
+// https://github.com/kevinburke/go-circle.git
 var httpsExp = regexp.MustCompile(`^https://(?P<domain>[^/:]+)(:(?P<port>[[0-9]+))?/(?P<pathRepo>.+?)(\.git/?)?$`)
 
 // A remote URL. Easiest to describe with an example:
 //
-// git@github.com:Shyp/shyp_api.git
+// git@github.com:kevinburke/go-circle.git
 //
 // Would be parsed as follows:
 //
-// Path     = Shyp
+// Path     = kevinburke
 // Host     = github.com
-// RepoName = shyp_api
+// RepoName = go-circle
 // SSHUser  = git
-// URL      = git@github.com:Shyp/shyp_api.git
+// URL      = git@github.com:kevinburke/go-circle.git
 // Format   = SSHFormat
 //
 // Similarly:
 //
-// https://github.com/Shyp/shyp_api.git
+// https://github.com/kevinburke/go-circle.git
 //
-// User     = Shyp
+// User     = kevinburke
 // Host     = github.com
-// RepoName = shyp_api
+// RepoName = go-circle
 // SSHUser  = ""
 // Format   = HTTPSFormat
 type RemoteURL struct {

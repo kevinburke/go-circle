@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-const Version = "0.22"
+const Version = "0.23"
 
 // A NullString is a String that may be null. It can be encoded or decoded from
 // JSON or the database.

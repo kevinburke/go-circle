@@ -28,14 +28,14 @@
 [[projects]]
   name = "github.com/kevinburke/go-git"
   packages = ["."]
-  revision = "da65f3cfe562df3928c9fd53b24030389ba00cd7"
-  version = "0.5"
+  revision = "ecca9822badaf6de132df18e1da83c175295fac8"
+  version = "0.6"
 
 [[projects]]
   name = "github.com/kevinburke/go-types"
   packages = ["."]
-  revision = "19e2165c29024957a2e2f8cf450a0e663a3473e4"
-  version = "0.22"
+  revision = "f419f772e940195389b0857fe24268c7066fd199"
+  version = "0.23"
 
 [[projects]]
   name = "github.com/kevinburke/go.uuid"
@@ -106,6 +106,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8bd14f52c5437274b57d490d9858ce08d0bbc53c9dceecf21998ae25c46e5392"
+  inputs-digest = "c588f323442b71675370ba1bca5b435f2df193a44f14c7a1f49f5d2c56e35938"
   solver-name = "gps-cdcl"
   solver-version = 1

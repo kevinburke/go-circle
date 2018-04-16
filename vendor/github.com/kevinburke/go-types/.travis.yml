@@ -4,11 +4,19 @@ go_import_path: github.com/kevinburke/go-types
 os: linux
 dist: trusty
 
-sudo: required
+sudo: false
+
+go:
+  - 1.9.x
+  - 1.10.x
+  - master
 
 before_script:
-     - wget "https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_0.9.0_amd64.deb"
-     - sudo dpkg --force-all -i bazel_0.9.0_amd64.deb
+  - go get ./...
 
 script:
-  - make ci
+  - make race-test
+
+cache:
+  directories:
+    - $GOPATH/pkg
