@@ -176,9 +176,9 @@ branch to wait for.
 	}
 	rebuildflags := flag.NewFlagSet("rebuild", flag.ExitOnError)
 	rebuildflags.Usage = func() {
-		fmt.Fprintf(os.Stderr, `usage: rebuild
+		fmt.Fprintf(os.Stderr, `usage: rebuild [branch]
 
-Rebuild a given test branch
+Rebuild a given test branch, or the current branch if none is provided.
 `)
 		rebuildflags.PrintDefaults()
 	}
