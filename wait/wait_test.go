@@ -36,35 +36,20 @@ func TestHttpError(t *testing.T) {
 	}
 }
 
-func TestEffectiveCost(t *testing.T) {
-	cost := getEffectiveCost(1 * time.Hour)
-	if cost != 7897 {
-		t.Errorf("expected 1 hour cost to be %d, was %d", 7897, cost)
-	}
-	cost = getEffectiveCost(30 * time.Minute)
-	if cost != 3948 {
-		t.Errorf("expected half hour cost to be %d, was %d", 3948, cost)
-	}
-	cost = getEffectiveCost(2 * time.Hour)
-	if cost != 15793 {
-		t.Errorf("expected half hour cost to be %d, was %d", 15793, cost)
-	}
-}
-
-func TestGetMaxTipLength(t *testing.T) {
-	minTipLength := getMinTipLength("1d79f2b877c86ac0964f3fe69a0171926aa6f1d8", "1d79f2b87")
+func TestShorterString(t *testing.T) {
+	minTipLength := getShorterString("1d79f2b877c86ac0964f3fe69a0171926aa6f1d8", "1d79f2b87")
 	expectedMinTipLength := 9
 	if minTipLength != expectedMinTipLength {
 		t.Errorf("expected half hour cost to be %d, was %d", expectedMinTipLength, minTipLength)
 	}
 
-	minTipLength = getMinTipLength("1d79f2b877c86ac0964f3fe69a0171926aa6f1d8", "1d79f2b")
+	minTipLength = getShorterString("1d79f2b877c86ac0964f3fe69a0171926aa6f1d8", "1d79f2b")
 	expectedMinTipLength = 7
 	if minTipLength != expectedMinTipLength {
 		t.Errorf("expected half hour cost to be %d, was %d", expectedMinTipLength, minTipLength)
 	}
 
-	minTipLength = getMinTipLength("1d79f", "1d79f2b87")
+	minTipLength = getShorterString("1d79f", "1d79f2b87")
 	expectedMinTipLength = 5
 	if minTipLength != expectedMinTipLength {
 		t.Errorf("expected half hour cost to be %d, was %d", expectedMinTipLength, minTipLength)

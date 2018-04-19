@@ -153,8 +153,9 @@ func doRebuild(flags *flag.FlagSet) error {
 func main() {
 	waitflags := flag.NewFlagSet("wait", flag.ExitOnError)
 	waitRemote := waitflags.String("remote", "origin", "Git remote to use")
+	waitRebase := waitflags.String("rebase", "", "Continually rebase against this remote Git branch")
 	waitflags.Usage = func() {
-		fmt.Fprintf(os.Stderr, `usage: wait [refspec]
+		fmt.Fprintf(os.Stderr, `usage: wait [--rebase=base-branch] [refspec]
 
 Wait for builds to complete, then print a descriptive output on success or
 failure. By default, waits on the current branch, otherwise you can pass a
@@ -210,7 +211,7 @@ Rebuild a given test branch, or the current branch if none is provided.
 		args := waitflags.Args()
 		branch, err := getBranchFromArgs(args)
 		checkError(err)
-		err = wait.Wait(branch, *waitRemote)
+		err = wait.Wait(branch, *waitRemote, *waitRebase)
 		checkError(err)
 	case "download-artifacts":
 		if len(args) == 1 {
