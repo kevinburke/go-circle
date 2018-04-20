@@ -6,6 +6,38 @@ This is a wrapper for the CircleCI API. Currently we use it to fetch the latest
 build for a branch, and wait for tests to finish on that branch. This fork
 exists because I left Shyp and wanted to keep developing the tool.
 
+## Usage
+
+Use `circle` by invoking one of its subcommands.
+
+	enable              Enable CircleCI tests for this project.
+	open                Open the latest branch build in a browser.
+	rebuild             Rebuild a given test branch.
+	version             Print the current version
+	wait                Wait for tests to finish on a branch.
+	download-artifacts  Download all artifacts.
+
+In particular, `circle wait` will wait for the current Git commit to build in
+CircleCI. If the build fails, `circle wait` will download the console output
+from the failed build step, and display it in the console. `wait` also displays
+statistics about how long each step of your build took.
+
+```
+$ circle wait
+Waiting for latest build on my-branch to complete
+Build on my-branch succeeded!
+
+Step                                         0
+=====================================================
+Spin up Environment                          1.07s
+Checkout code                                730ms
+Restoring Cache                              250ms
+make race-test                               16.76s
+Saving Cache                                 80ms
+
+Tests on my-branch took 21s. Quitting.
+```
+
 ## Token Management
 
 This library will look for your Circle API token in `~/cfg/circleci` and (if
@@ -19,7 +51,7 @@ this:
     token = "aabbccddeeff00"
 ```
 
-You can specify any org name you want.
+You can specify any organization name you want.
 
 ## Installation
 
