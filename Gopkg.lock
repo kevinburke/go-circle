@@ -52,8 +52,8 @@
 [[projects]]
   name = "github.com/kevinburke/rest"
   packages = ["."]
-  revision = "3d559d7967b033331191ee40bafc60bc8b14d545"
-  version = "2.0"
+  revision = "54a8b110959553907c102f05f4182840d8f1c92c"
+  version = "2.1"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -112,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "604321c1bab9def712d36650ad6a2745474c1f3b071496905343b6c4f2c2581f"
+  inputs-digest = "a2d9d2f60d9ab0480d8d3d6398acecc2479c1ba17332968c15fe3946189f7955"
   solver-name = "gps-cdcl"
   solver-version = 1
