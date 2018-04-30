@@ -21,7 +21,7 @@ func GetBuilds(branch string) error {
 		return err
 	}
 
-	cr, err := circle.GetTree(remote.Path, remote.RepoName, branch)
+	cr, err := circle.GetTree(remote.Host, remote.Path, remote.RepoName, branch)
 	if err != nil {
 		return err
 	}
@@ -58,14 +58,4 @@ func GetBuilds(branch string) error {
 	fmt.Println("\nMost recent build statuses fetched!")
 
 	return nil
-}
-
-// CancelBuild cancels a build (as specified by the build number)
-func CancelBuild(org string, project string, buildNum int) string {
-	fmt.Printf("\nCanceling build: %d for %s\n\n", buildNum, project)
-	if _, err := circle.CancelBuild(org, project, buildNum); err != nil {
-		return ""
-	}
-
-	return ""
 }

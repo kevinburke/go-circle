@@ -21,10 +21,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/skratchdot/open-golang"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/crypto"
 
 [[constraint]]

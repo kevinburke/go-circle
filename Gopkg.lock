@@ -69,9 +69,9 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/skratchdot/open-golang"
-  packages = ["open"]
-  revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
+  name = "github.com/pkg/browser"
+  packages = ["."]
+  revision = "c90ca0c84f15f81c982e32665bffd8d7aac8f097"
 
 [[projects]]
   branch = "master"
@@ -112,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a2d9d2f60d9ab0480d8d3d6398acecc2479c1ba17332968c15fe3946189f7955"
+  inputs-digest = "05ef75c3cfe0aa4e47dec3d1b8d5b9b669ecaff7da5098e364ca1a6a6549491c"
   solver-name = "gps-cdcl"
   solver-version = 1

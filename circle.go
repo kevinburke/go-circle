@@ -2,7 +2,6 @@ package circle
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -33,7 +32,6 @@ func init() {
 }
 
 const VERSION = "0.30"
-const baseUri = "https://circleci.com/api/v1/project"
 const v11BaseUri = "https://circleci.com/api/v1.1/project"
 
 type TreeBuild struct {
@@ -189,20 +187,20 @@ func (a Action) Failed() bool {
 	return a.HasFailed
 }
 
-func getTreeUri(org string, project string, branch string, token string) string {
-	return fmt.Sprintf("/%s/%s/tree/%s?circle-token=%s", org, project, branch, token)
+func getTreeUri(vcs VCS, org string, project string, branch string) string {
+	return fmt.Sprintf("/%s/%s/%s/tree/%s", vcs, org, project, branch)
 }
 
-func getBuildUri(org string, project string, build int, token string) string {
-	return fmt.Sprintf("/%s/%s/%d?circle-token=%s", org, project, build, token)
+func getBuildUri(vcs VCS, org string, project string, build int) string {
+	return fmt.Sprintf("/%s/%s/%s/%d", vcs, org, project, build)
 }
 
-func getCancelUri(org string, project string, build int, token string) string {
-	return fmt.Sprintf("%s/%s/%s/%d/cancel?circle-token=%s", baseUri, org, project, build, token)
+func getCancelUri(vcs VCS, org string, project string, build int) string {
+	return fmt.Sprintf("/%s/%s/%s/%d/cancel", vcs, org, project, build)
 }
 
-func getArtifactsUri(org string, project string, build int, token string) string {
-	return fmt.Sprintf("%s/%s/%s/%d/artifacts?circle-token=%s", baseUri, org, project, build, token)
+func getArtifactsUri(vcs VCS, org string, project string, build int) string {
+	return fmt.Sprintf("/%s/%s/%s/%d/artifacts", vcs, org, project, build)
 }
 
 type CircleTreeResponse []TreeBuild
@@ -232,19 +230,30 @@ type FollowResponse struct {
 	// TODO...
 }
 
+type VCS string
+
+const VCSTypeGithub VCS = "github"
+const VCSTypeBitbucket VCS = "bitbucket"
+
+func vcsType(host string) (VCS, error) {
+	switch {
+	case strings.Contains(host, "github.com"):
+		return VCSTypeGithub, nil
+	case strings.Contains(host, "bitbucket.org"):
+		return VCSTypeBitbucket, nil
+	default:
+		return "", fmt.Errorf("can't find VCS type for unknown host %s", host)
+	}
+}
+
 func Enable(ctx context.Context, host string, org string, repoName string) error {
 	token, err := getToken(org)
 	if err != nil {
 		return err
 	}
-	var vcs string
-	switch {
-	case strings.Contains(host, "github.com"):
-		vcs = "github"
-	case strings.Contains(host, "bitbucket.org"):
-		vcs = "bitbucket"
-	default:
-		return fmt.Errorf("can't enable unknown host %s", host)
+	vcs, err := vcsType(host)
+	if err != nil {
+		return err
 	}
 	uri := fmt.Sprintf("/%s/%s/%s/follow?circle-token=%s", vcs, org, repoName, token)
 	req, err := v11client.NewRequest("POST", uri, nil)
@@ -269,76 +278,61 @@ func Rebuild(ctx context.Context, tb *TreeBuild) error {
 	}
 	// https://circleci.com/gh/segmentio/db-service/1488
 	// url we have is https://circleci.com/api/v1.1/project/github/segmentio/db-service/1486/retry
-	uri := fmt.Sprintf("/%s/%s/%s/%d/retry?circle-token=%s", tb.VCSType, tb.Username, tb.RepoName, tb.BuildNum, token)
-	req, err := v11client.NewRequest("POST", uri, strings.NewReader("null"))
-	if err != nil {
-		return err
-	}
-	req = req.WithContext(ctx)
-	return v11client.Do(req, nil)
+	uri := fmt.Sprintf("/%s/%s/%s/%d/retry", tb.VCSType, tb.Username, tb.RepoName, tb.BuildNum)
+	return makeNewRequest(ctx, "POST", uri, token, nil)
 }
 
-func GetTree(org string, project string, branch string) (*CircleTreeResponse, error) {
-	return GetTreeContext(context.Background(), org, project, branch)
+func GetTree(host, org string, project string, branch string) (*CircleTreeResponse, error) {
+	return GetTreeContext(context.Background(), host, org, project, branch)
 }
 
-func GetTreeContext(ctx context.Context, org, project, branch string) (*CircleTreeResponse, error) {
+func GetTreeContext(ctx context.Context, host, org, project, branch string) (*CircleTreeResponse, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return nil, err
 	}
-	uri := getTreeUri(org, project, branch, token)
-	client := rest.NewClient("", "", baseUri)
-	req, err := client.NewRequest("GET", uri, nil)
+	vcs, err := vcsType(host)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
+	uri := getTreeUri(vcs, org, project, branch)
 	cr := new(CircleTreeResponse)
-	if err := client.Do(req, cr); err != nil {
+	if err := makeNewRequest(ctx, "GET", uri, token, cr); err != nil {
 		return nil, err
 	}
 	return cr, nil
 }
 
-func GetBuild(org string, project string, buildNum int) (*CircleBuild, error) {
+func GetBuild(host, org string, project string, buildNum int) (*CircleBuild, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return nil, err
 	}
-	uri := getBuildUri(org, project, buildNum, token)
-	client := rest.NewClient("", "", baseUri)
-	req, err := client.NewRequest("GET", uri, nil)
+	vcs, err := vcsType(host)
 	if err != nil {
 		return nil, err
 	}
+	uri := getBuildUri(vcs, org, project, buildNum)
 	cb := new(CircleBuild)
-	if err := client.Do(req, cb); err != nil {
+	if err := makeNewRequest(context.TODO(), "GET", uri, token, cb); err != nil {
 		return nil, err
 	}
 	return cb, nil
 }
 
-func GetArtifactsForBuild(org string, project string, buildNum int) ([]*CircleArtifact, error) {
+func GetArtifactsForBuild(host, org string, project string, buildNum int) ([]*CircleArtifact, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return []*CircleArtifact{}, err
 	}
-	uri := getArtifactsUri(org, project, buildNum, token)
-	body, err := makeRequest("GET", uri)
+	vcs, err := vcsType(host)
 	if err != nil {
-		return []*CircleArtifact{}, err
-	}
-	defer body.Close()
-	var r io.Reader
-	if os.Getenv("CIRCLE_DEBUG") == "true" {
-		r = io.TeeReader(body, os.Stdout)
-	} else {
-		r = body
-	}
-	var arts []*CircleArtifact
-	if err = json.NewDecoder(r).Decode(&arts); err != nil {
 		return nil, err
+	}
+	uri := getArtifactsUri(vcs, org, project, buildNum)
+	var arts []*CircleArtifact
+	if err := makeNewRequest(context.Background(), "GET", uri, token, &arts); err != nil {
+		return []*CircleArtifact{}, err
 	}
 	return arts, nil
 }
@@ -365,25 +359,31 @@ func DownloadArtifact(ctx context.Context, artifact *CircleArtifact, directory s
 	return copyErr
 }
 
-func CancelBuild(org string, project string, buildNum int) (*CircleBuild, error) {
+func makeNewRequest(ctx context.Context, method, uri, token string, resp interface{}) error {
+	client := rest.NewClient(token, "", v11BaseUri)
+	req, err := client.NewRequest(method, uri, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", fmt.Sprintf("go-circle/%s %s", VERSION, req.Header.Get("User-Agent")))
+	req = req.WithContext(ctx)
+	return client.Do(req, resp)
+}
+
+func CancelBuild(ctx context.Context, host, org, project string, buildNum int) (*CircleBuild, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return nil, err
 	}
-	uri := getCancelUri(org, project, buildNum, token)
-	body, err := makeRequest("POST", uri)
+	vcs, err := vcsType(host)
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
-	var r io.Reader
-	if os.Getenv("CIRCLE_DEBUG") == "true" {
-		r = io.TeeReader(body, os.Stdout)
-	} else {
-		r = body
-	}
-	d := json.NewDecoder(r)
+	uri := getCancelUri(vcs, org, project, buildNum)
 	var cb CircleBuild
-	err = d.Decode(&cb)
-	return &cb, err
+	if err := makeNewRequest(ctx, "POST", uri, token, &cb); err != nil {
+		return nil, err
+	}
+	return &cb, nil
 }

@@ -12,18 +12,19 @@ import (
 	circle "github.com/kevinburke/go-circle"
 	"github.com/kevinburke/go-circle/wait"
 	git "github.com/kevinburke/go-git"
-	"github.com/skratchdot/open-golang/open"
+	"github.com/pkg/browser"
 	"golang.org/x/sync/errgroup"
 )
 
 const help = `The circle binary interacts with a server that runs your tests.
 
-Usage: 
+Usage:
 
 	circle command [arguments]
 
 The commands are:
 
+	cancel              Cancel the current build.
 	enable              Enable CircleCI tests for this project.
 	open                Open the latest branch build in a browser.
 	rebuild             Rebuild a given test branch.
@@ -38,6 +39,11 @@ const downloadUsage = `usage: download-artifacts <build-num>`
 const enableUsage = `usage: enable [-h]
 
 Turn on CircleCI builds for this project.`
+
+const cancelUsage = `usage: cancel [-h] [branch]
+
+Cancel the current CircleCI build, or the latest build on the provided 
+Git branch.`
 
 func usage() {
 	fmt.Fprintf(os.Stderr, help)
@@ -71,7 +77,9 @@ func doOpen(flags *flag.FlagSet) {
 	checkError(err)
 	remote, err := git.GetRemoteURL("origin")
 	checkError(err)
-	cr, err := circle.GetTree(remote.Path, remote.RepoName, branch)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cr, err := circle.GetTreeContext(ctx, remote.Host, remote.Path, remote.RepoName, branch)
 	checkError(err)
 	if len(*cr) == 0 {
 		fmt.Printf("No results, are you sure there are tests for %s/%s?\n",
@@ -79,7 +87,9 @@ func doOpen(flags *flag.FlagSet) {
 		return
 	}
 	latestBuild := (*cr)[0]
-	open.Start(latestBuild.BuildURL)
+	if err := browser.OpenURL(latestBuild.BuildURL); err != nil {
+		checkError(err)
+	}
 }
 
 func doDownload(flags *flag.FlagSet) error {
@@ -93,7 +103,7 @@ func doDownload(flags *flag.FlagSet) error {
 		fmt.Fprintf(os.Stderr, "Error getting remote URL for remote %q: %v\n", "origin", err)
 		return err
 	}
-	arts, err := circle.GetArtifactsForBuild(remote.Path, remote.RepoName, val)
+	arts, err := circle.GetArtifactsForBuild(remote.Host, remote.Path, remote.RepoName, val)
 	if err != nil {
 		return err
 	}
@@ -130,6 +140,27 @@ func doEnable(flags *flag.FlagSet) error {
 	return circle.Enable(ctx, remote.Host, remote.Path, remote.RepoName)
 }
 
+func doCancel(flags *flag.FlagSet) error {
+	args := flags.Args()
+	branch, err := getBranchFromArgs(args)
+	checkError(err)
+	remote, err := git.GetRemoteURL("origin")
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cr, err := circle.GetTreeContext(ctx, remote.Host, remote.Path, remote.RepoName, branch)
+	checkError(err)
+	if len(*cr) == 0 {
+		return fmt.Errorf("No results, are you sure there are tests for %s/%s?\n",
+			remote.Path, remote.RepoName)
+	}
+	latestBuild := (*cr)[0]
+	_, cancelErr := circle.CancelBuild(ctx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+	return cancelErr
+}
+
 func doRebuild(flags *flag.FlagSet) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -142,7 +173,7 @@ func doRebuild(flags *flag.FlagSet) error {
 	if err != nil {
 		return err
 	}
-	cr, err := circle.GetTreeContext(ctx, remote.Path, remote.RepoName, branch)
+	cr, err := circle.GetTreeContext(ctx, remote.Host, remote.Path, remote.RepoName, branch)
 	if err != nil {
 		return err
 	}
@@ -151,6 +182,11 @@ func doRebuild(flags *flag.FlagSet) error {
 }
 
 func main() {
+	cancelflags := flag.NewFlagSet("cancel", flag.ExitOnError)
+	cancelflags.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s\n\n", cancelUsage)
+		cancelflags.PrintDefaults()
+	}
 	waitflags := flag.NewFlagSet("wait", flag.ExitOnError)
 	waitRemote := waitflags.String("remote", "origin", "Git remote to use")
 	waitRebase := waitflags.String("rebase", "", "Continually rebase against this remote Git branch")
@@ -192,6 +228,10 @@ Rebuild a given test branch, or the current branch if none is provided.
 	}
 	subargs := args[1:]
 	switch flag.Arg(0) {
+	case "cancel":
+		cancelflags.Parse(subargs)
+		err := doCancel(cancelflags)
+		checkError(err)
 	case "enable":
 		enableflags.Parse(subargs)
 		err := doEnable(enableflags)

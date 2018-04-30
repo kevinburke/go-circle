@@ -198,7 +198,7 @@ func wait(branch, remoteStr string, rebaseAgainst string) error {
 	time.Sleep(1 * time.Second)
 	var lastPrintedAt time.Time
 	for {
-		cr, err := circle.GetTreeContext(waitCtx, remote.Path, remote.RepoName, branch)
+		cr, err := circle.GetTreeContext(waitCtx, remote.Host, remote.Path, remote.RepoName, branch)
 		if err != nil {
 			if isHttpError(err) {
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
@@ -268,7 +268,7 @@ Push output was:
 				return err
 			}
 			fmt.Printf("Build on %s succeeded!\n\n", branch)
-			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
+			build, err := circle.GetBuild(remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
 			if err == nil {
 				fmt.Print(build.Statistics())
 			} else {
@@ -283,7 +283,7 @@ Push output was:
 			if err := checkRebase(&c); err != nil {
 				return err
 			}
-			build, err := circle.GetBuild(remote.Path, remote.RepoName, latestBuild.BuildNum)
+			build, err := circle.GetBuild(remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
 			if err == nil {
 				fmt.Print(build.Statistics())
 				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
