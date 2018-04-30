@@ -198,7 +198,7 @@ func wait(branch, remoteStr string, rebaseAgainst string) error {
 	time.Sleep(1 * time.Second)
 	var lastPrintedAt time.Time
 	for {
-		cr, err := circle.GetTree(remote.Path, remote.RepoName, branch)
+		cr, err := circle.GetTreeContext(waitCtx, remote.Path, remote.RepoName, branch)
 		if err != nil {
 			if isHttpError(err) {
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
@@ -306,7 +306,15 @@ Push output was:
 		}
 		if latestBuild.Status == "running" {
 			previousBuildDuration := time.Duration(latestBuild.Previous.BuildDurationMs) * time.Millisecond
-			if remoteci.ShouldPrint(lastPrintedAt, duration, previousBuildDuration) {
+			elapsedDuration := duration
+			if latestBuild.StartTime.Valid {
+				elapsedDuration = time.Since(latestBuild.StartTime.Time)
+			}
+			// use the elapsed duration for predicting how long the build will
+			// take to complete, but print the duration - we should show users
+			// the time since their build was pushed, not when Circle decided to
+			// start running it.
+			if remoteci.ShouldPrint(lastPrintedAt, elapsedDuration, previousBuildDuration) {
 				fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
 				lastPrintedAt = time.Now()
 			}
