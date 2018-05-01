@@ -59,4 +59,3 @@ AUTHORS.txt: | $(WRITE_MAILMAP)
 	$(WRITE_MAILMAP) > AUTHORS.txt
 
 authors: AUTHORS.txt
-	$(WRITE_MAILMAP) > AUTHORS.txt
