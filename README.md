@@ -58,9 +58,9 @@ You can specify any organization name you want.
 Find your target operating system (darwin, windows, linux) and desired bin
 directory, and modify the command below as appropriate:
 
-    curl --silent --location --output=/usr/local/bin/circle https://github.com/kevinburke/circle/releases/download/0.29/circle-linux-amd64 && chmod 755 /usr/local/bin/circle
+    curl --silent --location --output=/usr/local/bin/circle https://github.com/kevinburke/circle/releases/download/0.31/circle-linux-amd64 && chmod 755 /usr/local/bin/circle
 
-The latest version is 0.29.
+The latest version is 0.31.
 
 If you have a Go development environment, you can also install via source code:
 

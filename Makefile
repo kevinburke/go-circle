@@ -55,7 +55,9 @@ endif
 $(WRITE_MAILMAP):
 	go get -u github.com/kevinburke/write_mailmap
 
-AUTHORS.txt: | $(WRITE_MAILMAP)
+force: ;
+
+AUTHORS.txt: force | $(WRITE_MAILMAP)
 	$(WRITE_MAILMAP) > AUTHORS.txt
 
 authors: AUTHORS.txt
