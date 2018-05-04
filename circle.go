@@ -2,6 +2,7 @@ package circle
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -82,7 +83,10 @@ type CircleBuild struct {
 	PreviousSuccessfulBuild PreviousBuild  `json:"previous_successful_build"`
 	QueuedAt                types.NullTime `json:"queued_at"`
 	RepoName                string         `json:"reponame"` // "go"
+	StartTime               types.NullTime `json:"start_time"`
+	Status                  string         `json:"status"`
 	Steps                   []Step         `json:"steps"`
+	StopTime                types.NullTime `json:"stop_time"`
 	VCSType                 string         `json:"vcs_type"` // "github", "bitbucket"
 	UsageQueuedAt           types.NullTime `json:"usage_queued_at"`
 	Username                string         `json:"username"` // "golang"
@@ -303,7 +307,7 @@ func GetTreeContext(ctx context.Context, host, org, project, branch string) (*Ci
 	return cr, nil
 }
 
-func GetBuild(host, org string, project string, buildNum int) (*CircleBuild, error) {
+func GetBuild(ctx context.Context, host, org string, project string, buildNum int) (*CircleBuild, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return nil, err
@@ -314,7 +318,7 @@ func GetBuild(host, org string, project string, buildNum int) (*CircleBuild, err
 	}
 	uri := getBuildUri(vcs, org, project, buildNum)
 	cb := new(CircleBuild)
-	if err := makeNewRequest(context.TODO(), "GET", uri, token, cb); err != nil {
+	if err := makeNewRequest(ctx, "GET", uri, token, cb); err != nil {
 		return nil, err
 	}
 	return cb, nil
@@ -386,4 +390,25 @@ func CancelBuild(ctx context.Context, host, org, project string, buildNum int) (
 		return nil, err
 	}
 	return &cb, nil
+}
+
+// Elapsed gives our best estimate of the amount of time that has elapsed since
+// CircleCI found out about the build.
+func (cb *CircleBuild) Elapsed() time.Duration {
+	if cb.QueuedAt.Valid {
+		if cb.StopTime.Valid {
+			return cb.StopTime.Time.Sub(cb.QueuedAt.Time)
+		}
+		return time.Since(cb.QueuedAt.Time)
+	}
+	if cb.UsageQueuedAt.Valid {
+		if cb.StopTime.Valid {
+			return cb.StopTime.Time.Sub(cb.UsageQueuedAt.Time)
+		} else {
+			return time.Since(cb.UsageQueuedAt.Time)
+		}
+	}
+	data, _ := json.MarshalIndent(cb, "\n", "    ")
+	os.Stdout.Write(data)
+	panic("could not find elapsed time")
 }

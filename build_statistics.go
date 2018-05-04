@@ -2,21 +2,14 @@ package circle
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 const stepWidth = 45
 
 var stepPadding = fmt.Sprintf("%%-%ds", stepWidth)
-
-func isatty() bool {
-	return terminal.IsTerminal(int(os.Stdout.Fd()))
-}
 
 var forceNonZeroTestVal = time.Duration(0)
 
@@ -25,6 +18,9 @@ var forceNonZeroTestVal = time.Duration(0)
 func timeScaler(d time.Duration) string {
 	if d == 0 && forceNonZeroTestVal != 0 {
 		d = forceNonZeroTestVal
+	}
+	if d == -1 {
+		return ""
 	}
 	switch {
 	case d == 0:
@@ -47,12 +43,12 @@ func timeScaler(d time.Duration) string {
 
 // Statistics prints out statistics for the given build. If stdout is a TTY,
 // failed builds will be surrounded by red ANSI escape sequences.
-func (cb *CircleBuild) Statistics() string {
+func (cb *CircleBuild) Statistics(tty bool) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf(stepPadding, "Step"))
 	l := stepWidth
 	for i := uint8(0); i < cb.Parallel; i++ {
-		b.WriteString(fmt.Sprintf("%-8d", i))
+		b.WriteString(fmt.Sprintf("%8d", i))
 		l += 8
 	}
 	b.WriteString(fmt.Sprintf("\n%s\n", strings.Repeat("=", l)))
@@ -64,21 +60,33 @@ func (cb *CircleBuild) Statistics() string {
 			stepName = fmt.Sprintf(stepPadding, stepName)
 		}
 		b.WriteString(stepName)
+		i := uint16(0)
 		for _, action := range step.Actions {
+			for action.Index > i {
+				b.WriteString("        ")
+				i++
+			}
 			var dur time.Duration
-			if time.Duration(action.Runtime) > time.Minute {
+			switch {
+			case action.Runtime == -1:
+				dur = -1
+			case time.Duration(action.Runtime) > time.Minute:
 				dur = time.Duration(action.Runtime).Round(time.Second)
-			} else {
+			default:
 				dur = time.Duration(action.Runtime).Round(time.Millisecond * 10)
 			}
-			if action.Failed() && isatty() {
+			if action.Failed() && tty {
 				// color the output red
 				fmt.Fprintf(&b, "\033[38;05;160m%8s\033[0m", timeScaler(dur))
 			} else {
 				fmt.Fprintf(&b, "%8s", timeScaler(dur))
 			}
+			i++
 		}
 		b.WriteString("\n")
+	}
+	if cb.Status == "running" {
+		fmt.Fprintf(&b, "\nBuild %d running... %s elapsed\n", cb.BuildNum, cb.Elapsed().Round(time.Second))
 	}
 	return b.String()
 }

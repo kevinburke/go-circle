@@ -4,6 +4,7 @@ package circle
 // that here.
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"time"
@@ -31,7 +32,13 @@ func (oururl *URL) UnmarshalJSON(b []byte) error {
 
 type CircleDuration time.Duration
 
+var null = []byte("null")
+
 func (cd *CircleDuration) UnmarshalJSON(b []byte) error {
+	if bytes.Equal(b, null) {
+		*cd = CircleDuration(time.Duration(-1))
+		return nil
+	}
 	var d time.Duration
 	err := json.Unmarshal(b, &d)
 	if err != nil {

@@ -18,7 +18,12 @@ import (
 	"github.com/kevinburke/go-circle"
 	"github.com/kevinburke/go-git"
 	"github.com/kevinburke/remoteci"
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+func isatty() bool {
+	return terminal.IsTerminal(int(os.Stdout.Fd()))
+}
 
 // isHttpError checks if the given error is a request timeout or a network
 // failure - in those cases we want to just retry the request.
@@ -131,7 +136,28 @@ func newRemoteCommit(ctx context.Context, branch, remoteStr, remoteBranch string
 	return "", nil
 }
 
-func wait(branch, remoteStr string, rebaseAgainst string) error {
+var debugHTTPTraffic = os.Getenv("DEBUG_HTTP_TRAFFIC") == "true"
+
+func clear(w io.Writer, lines int) {
+	if !debugHTTPTraffic {
+		io.WriteString(w, strings.Repeat("\033[2K\r\033[1A", lines))
+	}
+}
+
+func draw(w io.Writer, build *circle.CircleBuild, prevLinesDrawn int) int {
+	stats := build.Statistics(true)
+	clear(w, prevLinesDrawn)
+	io.WriteString(w, stats+"\n\033[?25l")
+	return strings.Count(stats, "\n") + 1
+}
+
+func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) error {
+	tty := isatty()
+	defer func() {
+		if tty {
+			fmt.Printf("\033[?25h")
+		}
+	}()
 	remote, err := git.GetRemoteURL(remoteStr)
 	if err != nil {
 		return err
@@ -141,7 +167,7 @@ func wait(branch, remoteStr string, rebaseAgainst string) error {
 		return err
 	}
 	var wg sync.WaitGroup
-	waitCtx, waitCancel := context.WithCancel(context.Background())
+	waitCtx, waitCancel := context.WithCancel(ctx)
 	defer waitCancel()
 	var newCommit string
 	var newCommitMu sync.Mutex
@@ -195,15 +221,24 @@ func wait(branch, remoteStr string, rebaseAgainst string) error {
 	}
 	fmt.Println("Waiting for latest build on", branch, "to complete")
 	// Give CircleCI a little bit of time to start
-	time.Sleep(1 * time.Second)
+	select {
+	case <-waitCtx.Done():
+		return nil
+	case <-time.After(1 * time.Second):
+	}
 	var lastPrintedAt time.Time
+	linesDrawn := 0
 	for {
 		cr, err := circle.GetTreeContext(waitCtx, remote.Host, remote.Path, remote.RepoName, branch)
 		if err != nil {
 			if isHttpError(err) {
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
 				lastPrintedAt = time.Now()
-				time.Sleep(2 * time.Second)
+				select {
+				case <-waitCtx.Done():
+					return nil
+				case <-time.After(2 * time.Second):
+				}
 				continue
 			}
 			return err
@@ -237,15 +272,22 @@ Push output was:
 				fmt.Printf("Force pushed local commit %s to %s/%s to trigger new build...\n", tip, remoteStr, branch)
 				// shortest CircleCI build I've ever seen is 20 seconds, so we
 				// have some time to wait before a complete build.
-				time.Sleep(7 * time.Second)
-				continue
+				select {
+				case <-waitCtx.Done():
+					return nil
+				case <-time.After(7 * time.Second):
+				}
 			} else {
 				fmt.Printf("Latest build in Circle is %s, waiting for %s...\n",
 					shortVCSRev, tip)
 				lastPrintedAt = time.Now()
-				time.Sleep(5 * time.Second)
-				continue
+				select {
+				case <-waitCtx.Done():
+					return nil
+				case <-time.After(5 * time.Second):
+				}
 			}
+			continue
 		}
 		var duration time.Duration
 		if latestBuild.QueuedAt.Valid {
@@ -267,14 +309,21 @@ Push output was:
 			if err := checkRebase(&c); err != nil {
 				return err
 			}
-			fmt.Printf("Build on %s succeeded!\n\n", branch)
-			build, err := circle.GetBuild(remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
-			if err == nil {
-				fmt.Print(build.Statistics())
-			} else {
-				fmt.Printf("error getting build: %v\n", err)
+			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+			switch {
+			case err != nil:
+				fmt.Printf("error getting build statistics: %v\n", err)
+			case tty:
+				// need one last draw with the final timings
+				draw(os.Stdout, build, linesDrawn)
+				clear(os.Stdout, 2)
+			default:
+				fmt.Print(build.Statistics(false))
 			}
-			fmt.Printf("\nTests on %s took %s. Quitting.\n", branch, duration.String())
+			fmt.Printf(`Build on %s succeeded!
+
+Tests on %s took %s. Quitting.
+`, branch, branch, duration.String())
 			c.Display(branch + " build complete!")
 			break
 		}
@@ -283,21 +332,25 @@ Push output was:
 			if err := checkRebase(&c); err != nil {
 				return err
 			}
-			build, err := circle.GetBuild(remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
-			if err == nil {
-				fmt.Print(build.Statistics())
-				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-				texts, textsErr := build.FailureTexts(ctx)
-				if textsErr != nil {
-					fmt.Printf("error getting build failures: %v\n", textsErr)
-				}
-				cancel()
-				fmt.Printf("\nOutput from failed builds:\n\n")
-				for i := range texts {
-					fmt.Println(texts[i])
-				}
-			} else {
-				fmt.Printf("error getting build: %v\n", err)
+			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+			switch {
+			case err != nil:
+				fmt.Printf("error getting build stats: %v\n", err)
+			case tty:
+				draw(os.Stdout, build, linesDrawn)
+				clear(os.Stdout, 2)
+			default:
+				fmt.Print(build.Statistics(false))
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			texts, textsErr := build.FailureTexts(ctx)
+			if textsErr != nil {
+				fmt.Printf("error getting build failures: %v\n", textsErr)
+			}
+			cancel()
+			fmt.Printf("\nOutput from failed builds:\n\n")
+			for i := range texts {
+				fmt.Println(texts[i])
 			}
 			fmt.Printf("\nURL: %s\n", latestBuild.BuildURL)
 			err = fmt.Errorf("Build on %s failed!\n\n", branch)
@@ -310,13 +363,23 @@ Push output was:
 			if latestBuild.StartTime.Valid {
 				elapsedDuration = time.Since(latestBuild.StartTime.Time)
 			}
-			// use the elapsed duration for predicting how long the build will
-			// take to complete, but print the duration - we should show users
-			// the time since their build was pushed, not when Circle decided to
-			// start running it.
-			if remoteci.ShouldPrint(lastPrintedAt, elapsedDuration, previousBuildDuration) {
-				fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
-				lastPrintedAt = time.Now()
+			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+			switch {
+			case err != nil:
+				// draw one extra line
+				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
+				linesDrawn++
+			case tty:
+				linesDrawn = draw(os.Stdout, build, linesDrawn)
+			default:
+				// use the elapsed duration for predicting how long the build will
+				// take to complete, but print the duration - we should show users
+				// the time since their build was pushed, not when Circle decided to
+				// start running it.
+				if remoteci.ShouldPrint(lastPrintedAt, elapsedDuration, previousBuildDuration) {
+					fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
+					lastPrintedAt = time.Now()
+				}
 			}
 		} else if latestBuild.NotRunning() {
 			wg.Wait()
@@ -339,7 +402,11 @@ Push output was:
 		if err := checkRebase(&c); err != nil {
 			return err
 		}
-		time.Sleep(3 * time.Second)
+		select {
+		case <-waitCtx.Done():
+			return nil
+		case <-time.After(3 * time.Second):
+		}
 	}
 	return nil
 }
@@ -349,11 +416,15 @@ var errChangedRemote = errors.New("remote branch changed")
 // Wait waits for a build on the local branch to finish in CircleCI. If
 // rebaseAgainst is not empty, Wait will periodically fetch that branch from the
 // remote and rebase against it if it changes.
-func Wait(branch, remoteStr string, rebaseAgainst string) error {
+func Wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) error {
 	for {
-		err := wait(branch, remoteStr, rebaseAgainst)
+		err := wait(ctx, branch, remoteStr, rebaseAgainst)
 		if err == errChangedRemote {
-			time.Sleep(7 * time.Second)
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(7 * time.Second):
+			}
 			continue
 		}
 		return err

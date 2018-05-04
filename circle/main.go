@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -251,7 +252,14 @@ Rebuild a given test branch, or the current branch if none is provided.
 		args := waitflags.Args()
 		branch, err := getBranchFromArgs(args)
 		checkError(err)
-		err = wait.Wait(branch, *waitRemote, *waitRebase)
+		ctx, cancel := context.WithCancel(context.Background())
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			<-c
+			cancel()
+		}()
+		err = wait.Wait(ctx, branch, *waitRemote, *waitRebase)
 		checkError(err)
 	case "download-artifacts":
 		if len(args) == 1 {
