@@ -31,7 +31,7 @@ func init() {
 	v11client.Client.Timeout = 0
 }
 
-const VERSION = "0.30"
+const VERSION = "0.31"
 const v11BaseUri = "https://circleci.com/api/v1.1/project"
 
 type TreeBuild struct {
