@@ -8,8 +8,17 @@ exists because I left Shyp and wanted to keep developing the tool.
 
 ## Usage
 
-Use `circle` by invoking one of its subcommands.
+```
+$ circle
+The circle binary interacts with a server that runs your tests.
 
+Usage:
+
+	circle command [arguments]
+
+The commands are:
+
+	cancel              Cancel the current build.
 	enable              Enable CircleCI tests for this project.
 	open                Open the latest branch build in a browser.
 	rebuild             Rebuild a given test branch.
@@ -17,10 +26,14 @@ Use `circle` by invoking one of its subcommands.
 	wait                Wait for tests to finish on a branch.
 	download-artifacts  Download all artifacts.
 
-In particular, `circle wait` will wait for the current Git commit to build in
-CircleCI. If the build fails, `circle wait` will download the console output
-from the failed build step, and display it in the console. `wait` also displays
-statistics about how long each step of your build took.
+Use "circle help [command]" for more information about a command.
+```
+
+In particular, `circle wait` will print live statistics about how long each of
+your build steps are taking in each container. If the build fails, `circle wait`
+will download the console output from the failed build step, and display it in
+the console. `wait` also displays statistics about how long each step of your
+build took.
 
 ```
 $ circle wait
@@ -70,15 +83,3 @@ go get -u github.com/kevinburke/go-circle/...
 
 This should place a `circle` binary in `$GOPATH/bin`, so for me,
 `~/bin/circle`.
-
-## Wait for tests to pass/fail on a branch
-
-If you want to be notified when your tests finish running, run `circle wait
-[branchname]`. The interface for that will certainly change as well; we should
-be able to determine which organization/project to run tests for by checking
-your Git remotes.
-
-It's pretty neat! Here's a screenshot.
-
-<img src="https://monosnap.com/file/49h2NvVwxDBtHWlphAGiqzdJFDB7xy.png"
-alt="CircleCI screenshot">
