@@ -342,8 +342,8 @@ Tests on %s took %s. Quitting.
 			default:
 				fmt.Print(build.Statistics(false))
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			texts, textsErr := build.FailureTexts(ctx)
+			failureCtx, cancel := context.WithTimeout(waitCtx, 20*time.Second)
+			texts, textsErr := build.FailureTexts(failureCtx)
 			if textsErr != nil {
 				fmt.Printf("error getting build failures: %v\n", textsErr)
 			}

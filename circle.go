@@ -324,7 +324,7 @@ func GetBuild(ctx context.Context, host, org string, project string, buildNum in
 	return cb, nil
 }
 
-func GetArtifactsForBuild(host, org string, project string, buildNum int) ([]*CircleArtifact, error) {
+func GetArtifactsForBuild(ctx context.Context, host, org string, project string, buildNum int) ([]*CircleArtifact, error) {
 	token, err := getToken(org)
 	if err != nil {
 		return []*CircleArtifact{}, err
@@ -335,7 +335,7 @@ func GetArtifactsForBuild(host, org string, project string, buildNum int) ([]*Ci
 	}
 	uri := getArtifactsUri(vcs, org, project, buildNum)
 	var arts []*CircleArtifact
-	if err := makeNewRequest(context.Background(), "GET", uri, token, &arts); err != nil {
+	if err := makeNewRequest(ctx, "GET", uri, token, &arts); err != nil {
 		return []*CircleArtifact{}, err
 	}
 	return arts, nil

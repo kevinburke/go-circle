@@ -104,12 +104,12 @@ func doDownload(flags *flag.FlagSet) error {
 		fmt.Fprintf(os.Stderr, "Error getting remote URL for remote %q: %v\n", "origin", err)
 		return err
 	}
-	arts, err := circle.GetArtifactsForBuild(remote.Host, remote.Path, remote.RepoName, val)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	arts, err := circle.GetArtifactsForBuild(ctx, remote.Host, remote.Path, remote.RepoName, val)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
 	g, errctx := errgroup.WithContext(ctx)
 
 	tempDir, err := ioutil.TempDir("", "circle-artifacts")
