@@ -2,6 +2,8 @@ package remoteci
 
 import (
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func round(f float64) int {
@@ -60,4 +62,12 @@ func ShouldPrint(lastPrinted time.Time, previousBuildDuration, elapsedDuration t
 	}
 	now := time.Now()
 	return lastPrinted.Add(durToUse).Before(now)
+}
+
+type FileDescriptor interface {
+	Fd() uintptr
+}
+
+func IsATTY(f FileDescriptor) bool {
+	return terminal.IsTerminal(int(f.Fd()))
 }

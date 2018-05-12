@@ -152,12 +152,12 @@ func draw(w io.Writer, build *circle.CircleBuild, prevLinesDrawn int) int {
 }
 
 func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) error {
-	tty := isatty()
-	defer func() {
-		if tty {
+	tty := remoteci.IsATTY(os.Stdout)
+	if tty {
+		defer func() {
 			fmt.Printf("\033[?25h")
-		}
-	}()
+		}()
+	}
 	remote, err := git.GetRemoteURL(remoteStr)
 	if err != nil {
 		return err

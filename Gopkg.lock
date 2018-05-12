@@ -44,10 +44,10 @@
   version = "v1.2.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/kevinburke/remoteci"
   packages = ["."]
-  revision = "d50ae2068643aefa15e5d1649d8f67a31e2f5a39"
+  revision = "3a8ca1e7a4cc7e1c46efe2b7db63bdda2298ffa4"
+  version = "0.1"
 
 [[projects]]
   name = "github.com/kevinburke/rest"
@@ -112,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "05ef75c3cfe0aa4e47dec3d1b8d5b9b669ecaff7da5098e364ca1a6a6549491c"
+  inputs-digest = "24d7c04c3d55a4e344fa4642b2db383ccf0a1c5d971326fb03090d5d270bc047"
   solver-name = "gps-cdcl"
   solver-version = 1
