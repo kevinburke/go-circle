@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/kevinburke/go-circle"
 	"github.com/kevinburke/go-git"
 	"github.com/kevinburke/remoteci"
+	"github.com/pkg/browser"
 )
 
 // isHttpError checks if the given error is a request timeout or a network
@@ -237,6 +239,7 @@ func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) e
 	}
 	var lastPrintedAt time.Time
 	linesDrawn := 0
+	hasOpenedFailedBuild := false
 	for {
 		cr, err := circle.GetTreeContext(waitCtx, remote.Host, remote.Path, remote.RepoName, branch)
 		if err != nil {
@@ -361,19 +364,37 @@ Tests on %s took %s. Quitting.
 		}
 		if latestBuild.Status == "running" {
 			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
-			switch {
-			case err != nil:
+			if err != nil {
+				if isCtxCanceled(err) {
+					return nil
+				}
 				// draw one extra line
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
 				linesDrawn++
-			case tty:
-				linesDrawn = draw(os.Stdout, build, linesDrawn)
-			default:
-				// use the elapsed duration for predicting how long the build will
-				// take to complete, but print the duration - we should show users
-				// the time since their build was pushed, not when Circle decided to
-				// start running it.
-				fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
+			} else {
+				if tty {
+					linesDrawn = draw(os.Stdout, build, linesDrawn)
+				} else {
+					// use the elapsed duration for predicting how long the build will
+					// take to complete, but print the duration - we should show users
+					// the time since their build was pushed, not when Circle decided to
+					// start running it.
+					fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
+					linesDrawn++
+				}
+				if !hasOpenedFailedBuild {
+					// todo logic like this also exists in circle/main.go
+					for _, step := range build.Steps {
+						for _, action := range step.Actions {
+							if action.Failed() {
+								u := latestBuild.BuildURL + "#tests/containers/" + strconv.FormatUint(uint64(action.Index), 10)
+								if err := browser.OpenURL(u); err == nil {
+									hasOpenedFailedBuild = true
+								}
+							}
+						}
+					}
+				}
 			}
 		} else if latestBuild.NotRunning() {
 			wg.Wait()
