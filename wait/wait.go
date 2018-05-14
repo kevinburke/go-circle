@@ -18,12 +18,7 @@ import (
 	"github.com/kevinburke/go-circle"
 	"github.com/kevinburke/go-git"
 	"github.com/kevinburke/remoteci"
-	"golang.org/x/crypto/ssh/terminal"
 )
-
-func isatty() bool {
-	return terminal.IsTerminal(int(os.Stdout.Fd()))
-}
 
 // isHttpError checks if the given error is a request timeout or a network
 // failure - in those cases we want to just retry the request.
@@ -409,7 +404,6 @@ Tests on %s took %s. Quitting.
 				return nil
 			case <-sleepCh:
 				stillSleeping = false
-				break
 			case <-time.After(200 * time.Millisecond):
 				if latestBuild.Status == "running" {
 					clear(os.Stdout, 2)
