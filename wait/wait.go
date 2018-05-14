@@ -70,7 +70,7 @@ func getShorterString(a string, b string) int {
 }
 
 func rebase(ctx context.Context, branch, remoteStr, rebaseAgainst string, c *bigtext.Client) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	buf := new(bytes.Buffer)
 	remoteRef := remoteStr + "/" + rebaseAgainst
@@ -149,6 +149,20 @@ func draw(w io.Writer, build *circle.CircleBuild, prevLinesDrawn int) int {
 	clear(w, prevLinesDrawn)
 	io.WriteString(w, stats+"\n\033[?25l")
 	return strings.Count(stats, "\n") + 1
+}
+
+func isCtxCanceled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err == context.Canceled {
+		return true
+	}
+	uerr, ok := err.(*url.Error)
+	if ok && uerr.Err == context.Canceled {
+		return true
+	}
+	return false
 }
 
 func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) error {
@@ -231,6 +245,9 @@ func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) e
 	for {
 		cr, err := circle.GetTreeContext(waitCtx, remote.Host, remote.Path, remote.RepoName, branch)
 		if err != nil {
+			if isCtxCanceled(err) {
+				return nil
+			}
 			if isHttpError(err) {
 				fmt.Printf("Caught network error: %s. Continuing\n", err.Error())
 				lastPrintedAt = time.Now()
@@ -247,6 +264,7 @@ func wait(ctx context.Context, branch, remoteStr string, rebaseAgainst string) e
 			return fmt.Errorf("No results, are you sure there are tests for %s/%s?\n",
 				remote.Path, remote.RepoName)
 		}
+		var detailedBuild *circle.CircleBuild
 		latestBuild := (*cr)[0]
 		c := bigtext.Client{
 			Name:    fmt.Sprintf("%s (go-circle)", remote.RepoName),
@@ -289,36 +307,23 @@ Push output was:
 			}
 			continue
 		}
-		var duration time.Duration
-		if latestBuild.QueuedAt.Valid {
-			if latestBuild.StopTime.Valid {
-				duration = latestBuild.StopTime.Time.Sub(latestBuild.QueuedAt.Time)
-			} else {
-				duration = time.Since(latestBuild.QueuedAt.Time)
-			}
-		} else if latestBuild.UsageQueuedAt.Valid {
-			if latestBuild.StopTime.Valid {
-				duration = latestBuild.StopTime.Time.Sub(latestBuild.UsageQueuedAt.Time)
-			} else {
-				duration = time.Since(latestBuild.UsageQueuedAt.Time)
-			}
-		}
-		duration = duration.Round(time.Second)
+		duration := latestBuild.Elapsed().Round(time.Second)
 		if latestBuild.Passed() {
 			wg.Wait()
 			if err := checkRebase(&c); err != nil {
 				return err
 			}
-			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+			var err error
+			detailedBuild, err = circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
 			switch {
 			case err != nil:
 				fmt.Printf("error getting build statistics: %v\n", err)
 			case tty:
 				// need one last draw with the final timings
-				draw(os.Stdout, build, linesDrawn)
-				clear(os.Stdout, 2)
+				draw(os.Stdout, detailedBuild, linesDrawn)
+				clear(os.Stdout, 1)
 			default:
-				fmt.Print(build.Statistics(false))
+				fmt.Print(detailedBuild.Statistics(false))
 			}
 			fmt.Printf(`Build on %s succeeded!
 
@@ -332,18 +337,20 @@ Tests on %s took %s. Quitting.
 			if err := checkRebase(&c); err != nil {
 				return err
 			}
-			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+			var err error
+			detailedBuild, err = circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
 			switch {
 			case err != nil:
 				fmt.Printf("error getting build stats: %v\n", err)
+				return err
 			case tty:
-				draw(os.Stdout, build, linesDrawn)
-				clear(os.Stdout, 2)
+				draw(os.Stdout, detailedBuild, linesDrawn)
+				clear(os.Stdout, 1)
 			default:
-				fmt.Print(build.Statistics(false))
+				fmt.Print(detailedBuild.Statistics(false))
 			}
 			failureCtx, cancel := context.WithTimeout(waitCtx, 20*time.Second)
-			texts, textsErr := build.FailureTexts(failureCtx)
+			texts, textsErr := detailedBuild.FailureTexts(failureCtx)
 			if textsErr != nil {
 				fmt.Printf("error getting build failures: %v\n", textsErr)
 			}
@@ -358,11 +365,6 @@ Tests on %s took %s. Quitting.
 			return err
 		}
 		if latestBuild.Status == "running" {
-			previousBuildDuration := time.Duration(latestBuild.Previous.BuildDurationMs) * time.Millisecond
-			elapsedDuration := duration
-			if latestBuild.StartTime.Valid {
-				elapsedDuration = time.Since(latestBuild.StartTime.Time)
-			}
 			build, err := circle.GetBuild(waitCtx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
 			switch {
 			case err != nil:
@@ -376,10 +378,7 @@ Tests on %s took %s. Quitting.
 				// take to complete, but print the duration - we should show users
 				// the time since their build was pushed, not when Circle decided to
 				// start running it.
-				if remoteci.ShouldPrint(lastPrintedAt, elapsedDuration, previousBuildDuration) {
-					fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
-					lastPrintedAt = time.Now()
-				}
+				fmt.Printf("Build %d running (%s elapsed)\n", latestBuild.BuildNum, duration.String())
 			}
 		} else if latestBuild.NotRunning() {
 			wg.Wait()
@@ -402,10 +401,21 @@ Tests on %s took %s. Quitting.
 		if err := checkRebase(&c); err != nil {
 			return err
 		}
-		select {
-		case <-waitCtx.Done():
-			return nil
-		case <-time.After(3 * time.Second):
+		sleepCh := time.After(3 * time.Second)
+		stillSleeping := true
+		for stillSleeping {
+			select {
+			case <-waitCtx.Done():
+				return nil
+			case <-sleepCh:
+				stillSleeping = false
+				break
+			case <-time.After(200 * time.Millisecond):
+				if latestBuild.Status == "running" {
+					clear(os.Stdout, 2)
+					fmt.Fprintf(os.Stdout, "Build %d running... %s elapsed\n\n", latestBuild.BuildNum, latestBuild.Elapsed().Round(time.Second))
+				}
+			}
 		}
 	}
 	return nil

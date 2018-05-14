@@ -412,3 +412,27 @@ func (cb *CircleBuild) Elapsed() time.Duration {
 	os.Stdout.Write(data)
 	panic("could not find elapsed time")
 }
+
+// Elapsed gives our best estimate of the amount of time that has elapsed since
+// CircleCI found out about the build.
+func (tb *TreeBuild) Elapsed() time.Duration {
+	if tb.QueuedAt.Valid {
+		if tb.StopTime.Valid {
+			return tb.StopTime.Time.Sub(tb.QueuedAt.Time)
+		}
+		return time.Since(tb.QueuedAt.Time)
+	}
+	if tb.UsageQueuedAt.Valid {
+		if tb.StopTime.Valid {
+			return tb.StopTime.Time.Sub(tb.UsageQueuedAt.Time)
+		} else {
+			return time.Since(tb.UsageQueuedAt.Time)
+		}
+	}
+	if tb.Status == "not_running" {
+		return 0
+	}
+	data, _ := json.MarshalIndent(tb, "\n", "    ")
+	os.Stdout.Write(data)
+	panic("could not find elapsed time")
+}

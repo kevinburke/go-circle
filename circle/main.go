@@ -88,6 +88,26 @@ func doOpen(flags *flag.FlagSet) {
 		return
 	}
 	latestBuild := (*cr)[0]
+	if !latestBuild.NotRunning() {
+		detailedBuild, err := circle.GetBuild(ctx, remote.Host, remote.Path, remote.RepoName, latestBuild.BuildNum)
+		if err != nil {
+			if err := browser.OpenURL(latestBuild.BuildURL); err != nil {
+				checkError(err)
+			}
+			return
+		}
+		for _, step := range detailedBuild.Steps {
+			for _, action := range step.Actions {
+				if action.Failed() {
+					u := latestBuild.BuildURL + "#tests/containers/" + strconv.FormatUint(uint64(action.Index), 10)
+					if err := browser.OpenURL(u); err != nil {
+						checkError(err)
+					}
+					return
+				}
+			}
+		}
+	}
 	if err := browser.OpenURL(latestBuild.BuildURL); err != nil {
 		checkError(err)
 	}
