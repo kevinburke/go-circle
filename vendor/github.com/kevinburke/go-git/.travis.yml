@@ -9,6 +9,9 @@ sudo: false
 before_script:
   - go get -t -u ./...
 
+before_script:
+  - go get -u -t ./...
+
 script:
   - make race-test
 

@@ -1,14 +1,17 @@
 package git
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"os/exec"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/kevinburke/onceflight"
+	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const version = "0.6"
@@ -122,54 +125,93 @@ func ParseRemoteURL(remoteURL string) (*RemoteURL, error) {
 	return nil, fmt.Errorf("Could not parse %s as a git remote", remoteURL)
 }
 
+var group onceflight.Group
+
 // RemoteURL returns a Remote object with information about the given Git
 // remote.
 func GetRemoteURL(remoteName string) (*RemoteURL, error) {
-	rawRemote, err := exec.Command("git", "config", "--get", fmt.Sprintf("remote.%s.url", remoteName)).Output()
+	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-	// git response includes a newline
-	remote := strings.TrimSpace(string(rawRemote))
-	return ParseRemoteURL(remote)
+	v, err := group.Do(wd, func() (interface{}, error) {
+		r, err := git.PlainOpen(wd)
+		if err != nil {
+			return nil, err
+		}
+		rem, err := r.Remote(remoteName)
+		if err != nil {
+			return nil, err
+		}
+		cfg := rem.Config()
+		if len(cfg.URLs) == 0 {
+			return nil, fmt.Errorf("git: no remote URLs match")
+		}
+		return cfg.URLs[0], nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if s, ok := v.(string); ok {
+		return ParseRemoteURL(s)
+	}
+	panic(fmt.Sprintf("string value not returned from Do: %v", v))
+}
+
+func getRepo() (*git.Repository, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	return git.PlainOpen(wd)
 }
 
 // CurrentBranch returns the name of the current Git branch. Returns an error
 // if you are not on a branch, or if you are not in a git repository.
 func CurrentBranch() (string, error) {
-	result, err := exec.Command("git", "symbolic-ref", "--short", "HEAD").Output()
+	r, err := getRepo()
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(result)), nil
+	ref, err := r.Head()
+	if err != nil {
+		return "", err
+	}
+	name := ref.Name()
+	if !name.IsBranch() {
+		return "", fmt.Errorf("git: HEAD does not point at a branch, got %s", name)
+	}
+	return name.Short(), nil
 }
 
 // Tip returns the SHA of the given Git branch. If the empty string is
 // provided, defaults to HEAD on the current branch.
 func Tip(branch string) (string, error) {
+	r, err := getRepo()
+	if err != nil {
+		return "", err
+	}
 	if branch == "" {
 		branch = "HEAD"
 	}
-	result, err := exec.Command("git", "rev-parse", "--short", branch).CombinedOutput()
+	b, err := r.ResolveRevision(plumbing.Revision(branch))
 	if err != nil {
-		if strings.Contains(string(result), "Needed a single revision") {
-			return "", fmt.Errorf("git: Branch %s is unknown, can't get tip", branch)
-		}
 		return "", err
 	}
-	return strings.TrimSpace(string(result)), nil
+	return b.String(), nil
 }
 
 // Root returns the root directory of the current Git repository, or an error
 // if you are not in a git repository. If directory is not the empty string,
 // change the working directory before running the command.
 func Root(directory string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-	cmd.Dir = filepath.Dir(directory)
-	result, err := cmd.CombinedOutput()
-	trimmed := strings.TrimSpace(string(result))
+	r, err := git.PlainOpen(directory)
 	if err != nil {
-		return "", errors.New(trimmed)
+		return "", err
 	}
-	return strings.TrimSpace(trimmed), nil
+	wt, err := r.Worktree()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(wt.Filesystem.Root()), nil
 }
