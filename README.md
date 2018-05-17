@@ -71,7 +71,7 @@ You can specify any organization name you want.
 Find your target operating system (darwin, windows, linux) and desired bin
 directory, and modify the command below as appropriate:
 
-    curl --silent --location --output=/usr/local/bin/circle https://github.com/kevinburke/circle/releases/download/0.33/circle-linux-amd64 && chmod 755 /usr/local/bin/circle
+    curl --silent --location --output /usr/local/bin/circle https://github.com/kevinburke/go-circle/releases/download/0.33/circle-linux-amd64 && chmod 755 /usr/local/bin/circle
 
 The latest version is 0.33.
 
