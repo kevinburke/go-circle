@@ -383,6 +383,10 @@ Tests on %s took %s. Quitting.
 					linesDrawn++
 				}
 				if !hasOpenedFailedBuild {
+					wg.Wait()
+					if err := checkRebase(&c); err != nil {
+						return err
+					}
 					// todo logic like this also exists in circle/main.go
 					for _, step := range build.Steps {
 						for _, action := range step.Actions {
