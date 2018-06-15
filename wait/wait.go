@@ -390,10 +390,11 @@ Tests on %s took %s. Quitting.
 					// todo logic like this also exists in circle/main.go
 					for _, step := range build.Steps {
 						for _, action := range step.Actions {
-							if action.Failed() {
+							if action.Failed() && !hasOpenedFailedBuild {
 								u := latestBuild.BuildURL + "#tests/containers/" + strconv.FormatUint(uint64(action.Index), 10)
 								if err := browser.OpenURL(u); err == nil {
 									hasOpenedFailedBuild = true
+									break
 								}
 							}
 						}
