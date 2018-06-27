@@ -24,9 +24,6 @@ var client http.Client
 var v11client *rest.Client
 
 func init() {
-	client = http.Client{
-		Timeout: 10 * time.Second,
-	}
 	v11client = rest.NewClient("", "", v11BaseUri)
 	// use Context to set a timeout on this client
 	v11client.Client.Timeout = 0
@@ -209,13 +206,14 @@ func getArtifactsUri(vcs VCS, org string, project string, build int) string {
 
 type CircleTreeResponse []TreeBuild
 
-func makeRequest(method, uri string) (io.ReadCloser, error) {
+func makeRequest(ctx context.Context, method, uri string) (io.ReadCloser, error) {
 	req, err := http.NewRequest(method, uri, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("User-Agent", fmt.Sprintf("circle-command-line-client/%s", VERSION))
+	req = req.WithContext(ctx)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -354,7 +352,7 @@ func DownloadArtifact(ctx context.Context, artifact *CircleArtifact, directory s
 	}
 	defer f.Close()
 	url := fmt.Sprintf("%s?circle-token=%s", artifact.Url, token)
-	body, err := makeRequest("GET", url)
+	body, err := makeRequest(ctx, "GET", url)
 	if err != nil {
 		return err
 	}
